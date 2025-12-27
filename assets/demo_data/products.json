@@ -1,0 +1,37 @@
+[
+  {
+    "id": "1",
+    "name": "Stylish T-Shirt",
+    "description": "Comfortable and stylish cotton t-shirt.",
+    "price": 19.99,
+    "imageUrl": "assets/sample_onboarding1.png"
+  },
+  {
+    "id": "2",
+    "name": "Classic Jeans",
+    "description": "Durable denim jeans for everyday wear.",
+    "price": 49.99,
+    "imageUrl": "assets/sample_onboarding2.png"
+  },
+  {
+    "id": "3",
+    "name": "Running Shoes",
+    "description": "Lightweight and comfortable running shoes.",
+    "price": 79.99,
+    "imageUrl": "assets/sample_onboarding3.png"
+  },
+  {
+    "id": "4",
+    "name": "Leather Wallet",
+    "description": "Premium leather wallet with multiple compartments.",
+    "price": 34.99,
+    "imageUrl": "assets/sample_onboarding1.png"
+  },
+  {
+    "id": "5",
+    "name": "Smartwatch",
+    "description": "Feature-rich smartwatch with health tracking.",
+    "price": 129.99,
+    "imageUrl": "assets/sample_onboarding2.png"
+  }
+]

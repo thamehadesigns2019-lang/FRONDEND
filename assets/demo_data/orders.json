@@ -1,0 +1,39 @@
+[
+  {
+    "orderId": "ORD-001",
+    "items": [
+      {
+        "productId": "2",
+        "name": "Classic Jeans",
+        "price": 49.99,
+        "quantity": 1,
+        "imageUrl": "assets/sample_onboarding2.png"
+      }
+    ],
+    "totalAmount": 49.99,
+    "orderDate": "2023-10-26T10:00:00Z",
+    "status": "Delivered"
+  },
+  {
+    "orderId": "ORD-002",
+    "items": [
+      {
+        "productId": "1",
+        "name": "Stylish T-Shirt",
+        "price": 19.99,
+        "quantity": 2,
+        "imageUrl": "assets/sample_onboarding1.png"
+      },
+      {
+        "productId": "5",
+        "name": "Smartwatch",
+        "price": 129.99,
+        "quantity": 1,
+        "imageUrl": "assets/sample_onboarding2.png"
+      }
+    ],
+    "totalAmount": 169.97,
+    "orderDate": "2023-10-20T14:30:00Z",
+    "status": "Shipped"
+  }
+]

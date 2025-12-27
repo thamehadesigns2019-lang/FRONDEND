@@ -1,0 +1,16 @@
+[
+  {
+    "productId": "1",
+    "name": "Stylish T-Shirt",
+    "price": 19.99,
+    "quantity": 1,
+    "imageUrl": "assets/sample_onboarding1.png"
+  },
+  {
+    "productId": "3",
+    "name": "Running Shoes",
+    "price": 79.99,
+    "quantity": 1,
+    "imageUrl": "assets/sample_onboarding3.png"
+  }
+]
