@@ -54,11 +54,25 @@ class ApiService {
   }
 
   // AUTH
-  Future<Map<String, dynamic>> register(String username, String email, String password, String otp) async {
+  Future<Map<String, dynamic>> register(String username, String email, String password, String otp, {
+    String? fullName,
+    int? age,
+    String? gender,
+    String? countryCode,
+  }) async {
     final res = await http.post(
       Uri.parse('$baseUrl/api/auth/register'),
       headers: _setHeaders(),
-      body: jsonEncode({'username': username, 'email': email, 'password': password, 'otp': otp}),
+      body: jsonEncode({
+        'username': username,
+        'email': email,
+        'password': password,
+        'otp': otp,
+        'fullName': fullName,
+        'age': age,
+        'gender': gender,
+        'countryCode': countryCode,
+      }),
     );
     return _processResponse(res);
   }
@@ -212,7 +226,7 @@ class ApiService {
     return [];
   }
 
-  Future<Map<String, dynamic>> addToCart(int productId, int quantity, {Map<String, dynamic>? selectedOptions, double? price}) async {
+  Future<Map<String, dynamic>> addToCart(int productId, double quantity, {Map<String, dynamic>? selectedOptions, double? price}) async {
     final res = await http.post(
       Uri.parse('$baseUrl/api/cart'),
       headers: _setHeaders(authorized: true),
@@ -226,7 +240,7 @@ class ApiService {
     return _processResponse(res);
   }
 
-  Future<Map<String, dynamic>> updateCartItem(int cartId, int quantity) async {
+  Future<Map<String, dynamic>> updateCartItem(int cartId, double quantity) async {
     final res = await http.put(
       Uri.parse('$baseUrl/api/cart/$cartId'),
       headers: _setHeaders(authorized: true),
@@ -374,11 +388,11 @@ class ApiService {
      return _processResponse(res);
   }
 
-  Future<Map<String, dynamic>> updateUserProfile(String username) async {
+  Future<Map<String, dynamic>> updateUserProfile(Map<String, dynamic> updates) async {
     final res = await http.put(
       Uri.parse('$baseUrl/api/user/profile'),
       headers: await _getHeaders(authorized: true),
-      body: jsonEncode({'username': username}),
+      body: jsonEncode(updates),
     );
     return _processResponse(res);
   }

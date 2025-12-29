@@ -273,7 +273,11 @@ class CartScreen extends StatelessWidget {
   }
 
   Widget _buildOrderSummary(BuildContext context, AppState appState) {
-    final subtotal = appState.cartItems.fold(0.0, (sum, item) => sum + (appState.getPrice(item.price) * item.quantity));
+    final subtotal = appState.cartItems.fold(0.0, (sum, item) {
+       final product = appState.getProductById(item.productId);
+       final priceWithTax = product != null ? product.getPriceWithTax(item.price) : item.price;
+       return sum + (appState.getPrice(priceWithTax) * item.quantity);
+    });
     final total = subtotal;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -419,7 +423,9 @@ class _CartItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final unitPrice = appState.getPrice(item.price);
+    final product = appState.getProductById(item.productId);
+    final priceWithTax = product != null ? product.getPriceWithTax(item.price) : item.price;
+    final unitPrice = appState.getPrice(priceWithTax);
     final totalPrice = unitPrice * item.quantity;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -541,7 +547,7 @@ class _CartItemCard extends StatelessWidget {
                                padding: const EdgeInsets.symmetric(horizontal: 12.0),
                                constraints: const BoxConstraints(minWidth: 32),
                                alignment: Alignment.center,
-                               child: Text('${item.quantity}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                               child: Text(item.quantity % 1 == 0 ? item.quantity.toInt().toString() : item.quantity.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold)),
                              ),
                              _QtyBtn(icon: Icons.add, onTap: () =>  _updateQty(item.quantity + 1)),
                           ],
@@ -564,8 +570,8 @@ class _CartItemCard extends StatelessWidget {
     );
   }
 
-  void _updateQty(int newQty) {
-    if (newQty < 1) return;
+  void _updateQty(double newQty) {
+    if (newQty <= 0) return;
     appState.updateCartItemQuantity(item.cartId, newQty);
   }
 }

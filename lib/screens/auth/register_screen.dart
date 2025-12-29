@@ -17,6 +17,10 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _otpController = TextEditingController();
+  final TextEditingController _fullNameController = TextEditingController();
+  final TextEditingController _ageController = TextEditingController();
+  final TextEditingController _countryController = TextEditingController();
+  String? _selectedGender;
   
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -52,6 +56,9 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
     _emailController.dispose();
     _passwordController.dispose();
     _otpController.dispose();
+    _fullNameController.dispose();
+    _ageController.dispose();
+    _countryController.dispose();
     _animationController.dispose();
     super.dispose();
   }
@@ -123,6 +130,10 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
           _emailController.text,
           _passwordController.text,
           _otpController.text,
+          fullName: _fullNameController.text.isNotEmpty ? _fullNameController.text : null,
+          age: _ageController.text.isNotEmpty ? int.tryParse(_ageController.text) : null,
+          gender: _selectedGender,
+          countryCode: _countryController.text.isNotEmpty ? _countryController.text.toUpperCase() : null,
         );
         if (appState.isAuthenticated) {
           if (mounted) Navigator.of(context).pushReplacementNamed('/home');
@@ -299,13 +310,105 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                                         borderSide: const BorderSide(color: Colors.white, width: 2),
                                       ),
                                     ),
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty || !value.contains('@')) {
-                                        return 'Please enter a valid email';
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty || !value.contains('@')) {
+                                          return 'Please enter a valid email';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                    const SizedBox(height: 20),
+
+                                    // Full Name field
+                                    TextFormField(
+                                      controller: _fullNameController,
+                                      style: const TextStyle(color: Colors.white),
+                                      enabled: !_isOtpSent,
+                                      decoration: InputDecoration(
+                                        labelText: 'Full Name',
+                                        labelStyle: TextStyle(color: Colors.white.withOpacity(0.9)),
+                                        prefixIcon: const Icon(Icons.badge_outlined, color: Colors.white),
+                                        filled: true,
+                                        fillColor: Colors.white.withOpacity(0.1),
+                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+                                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+                                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.white, width: 2)),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 20),
+
+                                    Row(
+                                      children: [
+                                        // Age Field
+                                        Expanded(
+                                          flex: 1,
+                                          child: TextFormField(
+                                            controller: _ageController,
+                                            keyboardType: TextInputType.number,
+                                            style: const TextStyle(color: Colors.white),
+                                            enabled: !_isOtpSent,
+                                            decoration: InputDecoration(
+                                              labelText: 'Age',
+                                              labelStyle: TextStyle(color: Colors.white.withOpacity(0.9)),
+                                              filled: true,
+                                              fillColor: Colors.white.withOpacity(0.1),
+                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+                                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+                                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.white, width: 2)),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        // Gender Dropdown
+                                        Expanded(
+                                          flex: 2,
+                                          child: DropdownButtonFormField<String>(
+                                            value: _selectedGender,
+                                            dropdownColor: const Color(0xFF38ef7d), // Match gradient approx
+                                            style: const TextStyle(color: Colors.white),
+                                            decoration: InputDecoration(
+                                              labelText: 'Gender',
+                                              labelStyle: TextStyle(color: Colors.white.withOpacity(0.9)),
+                                              filled: true,
+                                              fillColor: Colors.white.withOpacity(0.1),
+                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+                                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+                                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.white, width: 2)),
+                                            ),
+                                            items: ['Male', 'Female', 'Other'].map((label) => DropdownMenuItem(
+                                                value: label.toLowerCase(),
+                                                child: Text(label),
+                                            )).toList(),
+                                            onChanged: _isOtpSent ? null : (val) => setState(() => _selectedGender = val),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 20),
+
+                                    // Country Code field
+                                    TextFormField(
+                                      controller: _countryController,
+                                      style: const TextStyle(color: Colors.white),
+                                      enabled: !_isOtpSent,
+                                      textCapitalization: TextCapitalization.characters,
+                                      maxLength: 2, // ISO code
+                                      decoration: InputDecoration(
+                                        labelText: 'Country Code (e.g. IN, AE)',
+                                        labelStyle: TextStyle(color: Colors.white.withOpacity(0.9)),
+                                        prefixIcon: const Icon(Icons.flag_outlined, color: Colors.white),
+                                        filled: true,
+                                        counterText: "", // hide counter
+                                        fillColor: Colors.white.withOpacity(0.1),
+                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+                                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+                                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.white, width: 2)),
+                                      ),
+                                      validator: (val) {
+                                          if (val != null && val.isNotEmpty && val.length != 2) return "Use 2-letter ISO code";
+                                          return null;
                                       }
-                                      return null;
-                                    },
-                                  ),
+                                    ),
                                   const SizedBox(height: 20),
                                   
                                   // Password field

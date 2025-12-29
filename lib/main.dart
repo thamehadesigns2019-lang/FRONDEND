@@ -173,6 +173,7 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _opacity;
+  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
@@ -185,6 +186,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     _opacity = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
       parent: _controller,
       curve: Curves.easeIn,
+    ));
+    
+    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutBack,
     ));
 
     _checkFirstTime();
@@ -235,7 +241,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       }
     }
 
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 3)); // Slightly longer for premium feel
 
     if (!mounted) return;
     
@@ -265,17 +271,83 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: FadeTransition(
-          opacity: _opacity,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-               const Icon(Icons.shopping_bag, size: 80, color: Colors.black),
-              const SizedBox(height: 20),
-              const CircularProgressIndicator(color: Colors.black),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF3949ab), // Primary Indigo
+              Color(0xFF5e35b1), // Deep Purple
             ],
+          ),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            child: FadeTransition(
+              opacity: _opacity,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Logo Container with Shadow
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 20,
+                            spreadRadius: 5,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/logo.png',
+                          width: 80,
+                          height: 80,
+                          errorBuilder: (c, o, s) => const Icon(Icons.shopping_bag, size: 60, color: Color(0xFF3949ab)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                    
+                    // App Name
+                    const Text(
+                      "Thameeha",
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Premium E-Commerce",
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 16,
+                        color: Colors.white.withOpacity(0.8),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 60),
+                    const CircularProgressIndicator(
+                      color: Colors.white, 
+                      strokeWidth: 3,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),

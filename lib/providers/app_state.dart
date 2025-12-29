@@ -62,36 +62,95 @@ class AppState with ChangeNotifier {
 
   void _fallbackCurrency() {
       try {
-        final locale = PlatformDispatcher.instance.locale;
-        final country = locale.countryCode ?? 'US';
-        String currencyCode = 'USD';
-        
-        if (country == 'IN') {
-          _currencySymbol = '₹';
-          currencyCode = 'INR';
-        } else if (country == 'GB') {
-          _currencySymbol = '£';
-          currencyCode = 'GBP';
-        } else if (['FR', 'DE', 'IT', 'ES', 'NL', 'EU'].contains(country)) {
-          _currencySymbol = '€';
-          currencyCode = 'EUR';
-        } else if (country == 'JP') {
-          _currencySymbol = '¥';
-          currencyCode = 'JPY';
-        } else {
-          _currencySymbol = '\$';
-          currencyCode = 'USD';
+        // 1. Get User Profile Country first if available (Authenticated User)
+        String? countryCode;
+        if (_currentUserProfile.isNotEmpty && _currentUserProfile['country_code'] != null) {
+          countryCode = _currentUserProfile['country_code'].toString().toUpperCase();
+        }
+
+        // 2. Fallback to Device Locale if Profile is empty/not auth
+        if (countryCode == null || countryCode.isEmpty) {
+             final locale = PlatformDispatcher.instance.locale;
+             countryCode = locale.countryCode?.toUpperCase() ?? 'US';
+        }
+
+        String assignedCurrency = 'USD';
+        String assignedSymbol = '\$';
+
+        // Precise Mapping
+        switch (countryCode) {
+          case 'IN': 
+            assignedCurrency = 'INR';
+            assignedSymbol = '₹';
+            break;
+          case 'GB':
+          case 'UK':
+            assignedCurrency = 'GBP';
+            assignedSymbol = '£';
+            break;
+          case 'AE':
+            assignedCurrency = 'AED';
+            assignedSymbol = 'د.إ';
+            break;
+          case 'SA':
+            assignedCurrency = 'SAR';
+            assignedSymbol = '﷼';
+            break;
+          case 'KW':
+            assignedCurrency = 'KWD';
+            assignedSymbol = 'Kd';
+            break;
+          case 'QA':
+            assignedCurrency = 'QAR';
+            assignedSymbol = '﷼';
+            break;
+          case 'OM':
+            assignedCurrency = 'OMR';
+            assignedSymbol = '﷼';
+            break;
+          case 'BH':
+            assignedCurrency = 'BHD';
+            assignedSymbol = '.د.ب';
+            break;
+          case 'JP':
+            assignedCurrency = 'JPY';
+            assignedSymbol = '¥';
+            break;
+          case 'CN':
+            assignedCurrency = 'CNY';
+            assignedSymbol = '¥';
+            break;
+          case 'AU':
+            assignedCurrency = 'AUD';
+            assignedSymbol = 'A\$';
+            break;
+          case 'CA':
+            assignedCurrency = 'CAD';
+            assignedSymbol = 'C\$';
+            break;
+          // Eurozone check
+          case 'DE': case 'FR': case 'IT': case 'ES': case 'NL': case 'BE': 
+          case 'AT': case 'GR': case 'PT': case 'FI': case 'IE':
+            assignedCurrency = 'EUR';
+            assignedSymbol = '€';
+            break;
+          default:
+            assignedCurrency = 'USD';
+            assignedSymbol = '\$';
         }
         
-        // Update user settings default if not set
-        if (_userSettings.preferredCurrency == 'USD' && currencyCode != 'USD') {
+        _currencySymbol = assignedSymbol;
+        
+        // Update user settings if it differs from what we detected
+        if (_userSettings.preferredCurrency != assignedCurrency) {
              _userSettings = UserSettings(
                 enableNotifications: _userSettings.enableNotifications,
                 darkMode: _userSettings.darkMode,
-                preferredCurrency: currencyCode
+                preferredCurrency: assignedCurrency
              );
         }
       } catch (e) {
+        print("Fallback currency error: $e");
         _currencySymbol = '\$';
       }
   }
@@ -143,6 +202,7 @@ class AppState with ChangeNotifier {
   List<CartItem> _cartItems = [];
   List<Order> _orders = [];
   UserSettings _userSettings = UserSettings();
+  Map<String, dynamic> _currentUserProfile = {};
 
   // Navigation state for bottom bar
   int _selectedTabIndex = 0;
@@ -154,6 +214,17 @@ class AppState with ChangeNotifier {
   List<Order> get orders => _orders;
   List<Product> get recentlyViewed => _recentlyViewed; // Expose Recent
   UserSettings get userSettings => _userSettings;
+  Map<String, dynamic> get currentUserProfile => _currentUserProfile;
+
+  bool get isProfileIncomplete {
+      if (!_isAuthenticated) return false;
+      // If profile is empty but authenticated, maybe we haven't fetched it yet. 
+      // But we call fetchUserProfile in fetchAllData.
+      if (_currentUserProfile.isEmpty) return false; // Don't annoy if not loaded
+      final country = _currentUserProfile['country_code'];
+      return country == null || country.toString().isEmpty;
+  }
+
   int get selectedTabIndex => _selectedTabIndex;
   String? get selectedCategory => _selectedCategory;
 
@@ -224,6 +295,8 @@ class AppState with ChangeNotifier {
     print('AppState: fetchAllData - isAuthenticated: $_isAuthenticated');
     
     if (_isAuthenticated) {
+      await fetchUserProfile(); // Fetch profile first to set localization if needed
+      await _initializeLocalization(); // Re-run this to pick up User Country
       await fetchCartItems();
       await fetchOrders();
     } else {
@@ -334,6 +407,19 @@ class AppState with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> fetchUserProfile() async {
+    if (!_isAuthenticated) return;
+    try {
+      final res = await _apiService.fetchUserProfile();
+      if (res['message'] == 'success') {
+        _currentUserProfile = res['data'];
+      }
+    } catch (e) {
+      print('Error fetching user profile: $e');
+    }
+    notifyListeners();
+  }
+
   // ===========================================
   // LOCAL CART PERSISTENCE
   // ===========================================
@@ -423,9 +509,23 @@ class AppState with ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> register(String username, String email, String password, String otp) async {
+  Future<Map<String, dynamic>> register(String username, String email, String password, String otp, {
+    String? fullName,
+    int? age,
+    String? gender,
+    String? countryCode,
+  }) async {
     try {
-      final response = await _apiService.register(username, email, password, otp);
+      final response = await _apiService.register(
+        username,
+        email,
+        password,
+        otp,
+        fullName: fullName,
+        age: age,
+        gender: gender,
+        countryCode: countryCode,
+      );
       if (response['message'] == 'success') {
         await login(username, password);
       }
@@ -488,7 +588,7 @@ class AppState with ChangeNotifier {
   // CART OPERATIONS
   // ===========================================
 
-  Future<void> addToCart(int productId, int quantity, {Map<String, dynamic>? selectedOptions, double? price}) async {
+  Future<void> addToCart(int productId, double quantity, {Map<String, dynamic>? selectedOptions, double? price}) async {
     if (_isAuthenticated) {
       try {
         await _apiService.addToCart(productId, quantity, selectedOptions: selectedOptions, price: price);
@@ -545,8 +645,8 @@ class AppState with ChangeNotifier {
     }
   }
 
-  Future<void> updateCartItemQuantity(int cartId, int quantity) async {
-    if (quantity < 1) {
+  Future<void> updateCartItemQuantity(int cartId, double quantity) async {
+    if (quantity <= 0) {
       await removeFromCart(cartId);
       return;
     }

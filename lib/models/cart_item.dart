@@ -5,7 +5,7 @@ class CartItem {
   final int productId;
   final String name;
   final double price;
-  int quantity;
+  double quantity;
   final String? image;
   final Map<String, dynamic>? selectedOptions;
 
@@ -25,7 +25,7 @@ class CartItem {
       productId: json['product_id'] as int,
       name: json['name'] as String,
       price: json['price'].toDouble(),
-      quantity: json['quantity'] as int,
+      quantity: (json['quantity'] as num).toDouble(),
       image: json['image'] as String?,
       selectedOptions: json['selected_options'] != null
           ? Map<String, dynamic>.from(jsonDecode(json['selected_options']))

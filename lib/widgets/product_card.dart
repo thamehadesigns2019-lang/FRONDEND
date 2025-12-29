@@ -215,7 +215,7 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '$currency${appState.getPrice(widget.product.price).toStringAsFixed(2)}',
+                              '$currency${appState.getPrice(widget.product.displayPrice).toStringAsFixed(2)} / ${widget.product.formattedUnit}',
                               style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
                             ),
                             if (widget.product.reviewCount > 0)

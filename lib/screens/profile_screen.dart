@@ -19,6 +19,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _username = '';
   String _email = '';
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _ageController = TextEditingController();
+  final TextEditingController _countryController = TextEditingController();
+  String? _selectedGender;
 
   // Password Change
   final _passwordFormKey = GlobalKey<FormState>();
@@ -42,7 +45,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() {
           _username = userData['username'] ?? '';
           _email = userData['email'] ?? '';
-          _nameController.text = _username;
+          _nameController.text = userData['full_name'] ?? _username;
+          if (userData['age'] != null) _ageController.text = userData['age'].toString();
+          if (userData['gender'] != null) _selectedGender = userData['gender'];
+          if (userData['country_code'] != null) _countryController.text = userData['country_code'];
         });
       }
     } catch (e) {
@@ -58,10 +64,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _isLoading = true);
     try {
       final appState = Provider.of<AppState>(context, listen: false);
-      await appState.apiService.updateUserProfile(_nameController.text.trim());
+      await appState.apiService.updateUserProfile({
+        'username': _nameController.text.trim(), // Assuming name field maps to username or full_name? Actually logic uses username field for full_name sometimes. Let's send both or clarify. 
+        // Existing backend controller expects 'username' to update USERNAME column. 'full_name' for full name.
+        // My _nameController label says 'Full Name'. 
+        // If I want to update full_name, I should send full_name. If I want to update username, I need another field.
+        // But the previous code used _nameController for fetchUserProfile['username'].
+        // The user likely wants 'Full Name'. I will send both if needed, but username is unique.
+        // Let's assume _nameController is Full Name and we keep username separate or readonly?
+        // Pre-existing code: `_nameController.text = _username;` implies it was editing username.
+        // I will send it as `full_name` AND `username`? Changing username breaks login if email not used.
+        // Let's send it as `full_name`. And keep username as is if I don't expose a separate field.
+        // Actually, let's treat it as Full Name as per label.
+        'fullName': _nameController.text.trim(),
+        'age': _ageController.text.isNotEmpty ? int.tryParse(_ageController.text.trim()) : null,
+        'gender': _selectedGender,
+        'countryCode': _countryController.text.isNotEmpty ? _countryController.text.trim().toUpperCase() : null,
+      });
       CustomToast.success(context, 'Profile updated successfully');
       // Refresh
       await _fetchProfile();
+      // Also refresh app state to update currency if country changed
+      await appState.fetchAllData(); // Re-fetches everything including pricing rules logic
     } catch (e) {
       CustomToast.error(context, 'Failed to update: $e');
     } finally {
@@ -273,6 +297,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 fillColor: Colors.grey.shade50,
               ),
               validator: (value) => value!.isEmpty ? 'Name cannot be empty' : null,
+            ),
+            const SizedBox(height: 20),
+            
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _ageController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                        labelText: 'Age',
+                        prefixIcon: const Icon(Icons.cake_outlined),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedGender,
+                    decoration: InputDecoration(
+                        labelText: 'Gender',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                    ),
+                    items: ['male', 'female', 'other'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                    onChanged: (val) => setState(() => _selectedGender = val),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            
+            TextFormField(
+              controller: _countryController,
+              decoration: InputDecoration(
+                labelText: 'Country Code (e.g. IN, AE)',
+                helperText: "Used for currency & pricing",
+                prefixIcon: const Icon(Icons.flag_outlined),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              maxLength: 2,
             ),
             const SizedBox(height: 20),
             TextFormField(

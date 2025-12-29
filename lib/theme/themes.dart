@@ -7,6 +7,9 @@ class AppTheme {
   static const Color primaryDeep = Color(0xFF212121);   // Dark Gray
   static const Color accentCyan = Color(0xFF9E9E9E);    // Grey
   static const Color accentPink = Color(0xFFEEEEEE);    // Light Gray
+
+  static const Color primaryIndigo = Color(0xFF3949ab); // Added to fix missing member error
+
   
   static const Color successGreen = Color(0xFF2E7D32);  // Darker Green
   static const Color warningOrange = Color(0xFFEF6C00); // Darker Orange

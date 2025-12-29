@@ -17,7 +17,7 @@ class ProductDetailScreen extends StatefulWidget {
 }
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
-  int _quantity = 1;
+  double _quantity = 1;
   int _currentImageIndex = 0;
   
   // State for variant selection:  {'Color': 'Red', 'Size': 'M'}
@@ -300,7 +300,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return product.price;
   }
 
-  int _getCurrentStock(Product product) {
+  double _getCurrentStock(Product product) {
     // If no variants, return global stock
     if (product.variants.isEmpty) return product.stockQuantity;
 
@@ -524,7 +524,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               ),
                               child: Text(
                                 _getCurrentStock(product) > 0 
-                                   ? (_getCurrentStock(product) < 10 ? 'Only ${_getCurrentStock(product)} Left' : 'In Stock') 
+                                   ? (_getCurrentStock(product) <= 10 
+                                      ? 'Only ${_getCurrentStock(product) % 1 == 0 ? _getCurrentStock(product).toInt() : _getCurrentStock(product).toStringAsFixed(1)} left!' 
+                                      : 'In Stock: ${_getCurrentStock(product) % 1 == 0 ? _getCurrentStock(product).toInt() : _getCurrentStock(product).toStringAsFixed(1)}') 
                                    : 'Out of Stock',
                                 style: TextStyle(
                                   color: _getCurrentStock(product) > 0 ? AppTheme.successGreen : AppTheme.errorRed,
@@ -557,7 +559,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         const SizedBox(height: 24),
                         // Price
                         Text(
-                          '${appState.currencySymbol}${appState.getPrice(_getCurrentPrice(product)).toStringAsFixed(2)}',
+                          '${appState.currencySymbol}${appState.getPrice(product.getPriceWithTax(_getCurrentPrice(product))).toStringAsFixed(2)} / ${product.formattedUnit}',
                           style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: AppTheme.primaryPurple),
                         ),
                         const SizedBox(height: 32),
@@ -607,12 +609,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 ),
                                 child: Row(
                                   children: [
-                                    IconButton(onPressed: () => _quantity > 1 ? setState(()=>_quantity--) : null, icon: const Icon(Icons.remove)),
+                                    IconButton(onPressed: () => _quantity > (product.allowDecimal ? 0.5 : 1) ? setState(()=>_quantity -= (product.allowDecimal ? 0.5 : 1)) : null, icon: const Icon(Icons.remove)),
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                                      child: Text('$_quantity', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                      child: Text(product.allowDecimal ? _quantity.toStringAsFixed(1) : _quantity.toInt().toString(), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                                     ),
-                                    IconButton(onPressed: () => _quantity < _getCurrentStock(product) ? setState(()=>_quantity++) : null, icon: const Icon(Icons.add)),
+                                    IconButton(onPressed: () => _quantity + (product.allowDecimal ? 0.5 : 1) <= _getCurrentStock(product) ? setState(()=>_quantity += (product.allowDecimal ? 0.5 : 1)) : null, icon: const Icon(Icons.add)),
                                   ],
                                 ),
                             ),
@@ -705,7 +707,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               ),
                               child: Text(
                                 _getCurrentStock(product) > 0 
-                                   ? (_getCurrentStock(product) < 10 ? '${_getCurrentStock(product)} Left' : 'In Stock') 
+                                   ? (_getCurrentStock(product) <= 10 
+                                      ? 'Only ${_getCurrentStock(product) % 1 == 0 ? _getCurrentStock(product).toInt() : _getCurrentStock(product).toStringAsFixed(1)} left!' 
+                                      : 'In Stock: ${_getCurrentStock(product) % 1 == 0 ? _getCurrentStock(product).toInt() : _getCurrentStock(product).toStringAsFixed(1)}') 
                                    : 'Out of Stock',
                                 style: TextStyle(
                                   color: _getCurrentStock(product) > 0
@@ -729,7 +733,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                          Row(
                           children: [
                             Text(
-                              '${appState.currencySymbol}${appState.getPrice(_getCurrentPrice(product)).toStringAsFixed(2)}',
+                              '${appState.currencySymbol}${appState.getPrice(product.getPriceWithTax(_getCurrentPrice(product))).toStringAsFixed(2)} / ${product.formattedUnit}',
                               style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
