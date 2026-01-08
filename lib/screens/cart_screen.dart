@@ -158,33 +158,35 @@ class CartScreen extends StatelessWidget {
   Widget _buildDesktopLayout(BuildContext context, AppState appState) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1400),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Left: Cart Items
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.shopping_bag_outlined, size: 28, color: Theme.of(context).iconTheme.color),
-                        const SizedBox(width: 12),
-                        Text('Your Cart (${appState.cartItems.length} items)', 
-                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                    Expanded(
-                      child: ListView.separated(
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1400),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Left: Cart Items
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.shopping_bag_outlined, size: 28, color: Theme.of(context).iconTheme.color),
+                          const SizedBox(width: 12),
+                          Text('Your Cart (${appState.cartItems.length} items)', 
+                             style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      const SizedBox(height: 32),
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
                         itemCount: appState.cartItems.length,
                         separatorBuilder: (context, index) => const SizedBox(height: 24),
                         itemBuilder: (context, index) {
@@ -196,28 +198,28 @@ class CartScreen extends StatelessWidget {
                           );
                         },
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 60),
-              // Right: Summary
-              SizedBox(
-                width: 400,
-                child: Column(
-                  children: [
-                     _buildOrderSummary(context, appState),
-                     const SizedBox(height: 40),
-                     _buildProtectionBadge(context),
-                  ],
+                const SizedBox(width: 60),
+                // Right: Summary
+                SizedBox(
+                  width: 400,
+                  child: Column(
+                    children: [
+                       _buildOrderSummary(context, appState),
+                       const SizedBox(height: 40),
+                       _buildProtectionBadge(context),
+                    ],
+                  ),
                 ),
-              ),
+              ],
+            ),
+            const SizedBox(height: 60),
+            _RecentlyPurchasedSection(appState: appState),
             ],
           ),
-          const SizedBox(height: 60),
-          _buildSuggestionsSection(context, appState),
-          ],
-        ),
+          ),
         ),
       ),
     );
@@ -262,7 +264,7 @@ class CartScreen extends StatelessWidget {
                  const SizedBox(height: 24),
                  _buildProtectionBadge(context),
                  const SizedBox(height: 48),
-                 _buildSuggestionsSection(context, appState),
+                 _RecentlyPurchasedSection(appState: appState),
                  const SizedBox(height: 80),
               ],
             ),
@@ -554,12 +556,27 @@ class _CartItemCard extends StatelessWidget {
                         ),
                       ),
                       
-                      TextButton.icon(
-                        onPressed: () => appState.removeFromCart(item.cartId),
-                        icon: Icon(Icons.delete_outline, size: 18, color: Colors.red[300]),
-                        label: Text("Remove", style: TextStyle(color: Colors.red[300], fontSize: 13)),
-                        style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12)),
-                      )
+                      if (isDesktop)
+                        TextButton.icon(
+                          onPressed: () => appState.removeFromCart(item.cartId),
+                          icon: Icon(Icons.delete_outline, size: 18, color: Colors.red[300]),
+                          label: Text("Remove", style: TextStyle(color: Colors.red[300], fontSize: 13)),
+                          style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12)),
+                        )
+                      else
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            onPressed: () => appState.removeFromCart(item.cartId),
+                            icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                          ),
+                        ),
                    ],
                  ),
                ],
@@ -596,40 +613,131 @@ class _QtyBtn extends StatelessWidget {
   }
 }
 
-List<Product> _getRecentlyPurchasedOrSuggested(AppState appState) {
-    if (appState.orders.isNotEmpty) {
-       final purchasedIds = appState.orders.expand((o) => o.items).map((i) => i.productId).toSet();
-       final purchased = appState.products.where((p) => purchasedIds.contains(p.id)).take(10).toList();
-       if (purchased.isNotEmpty) return purchased;
-    }
-    // Fallback to Trending or Random
-    return appState.products.where((p) => p.isTrending).take(10).toList();
+class _RecentlyPurchasedSection extends StatefulWidget {
+  final AppState appState;
+  const _RecentlyPurchasedSection({required this.appState});
+
+  @override
+  State<_RecentlyPurchasedSection> createState() => _RecentlyPurchasedSectionState();
 }
 
-Widget _buildSuggestionsSection(BuildContext context, AppState appState) {
-    final products = _getRecentlyPurchasedOrSuggested(appState);
+class _RecentlyPurchasedSectionState extends State<_RecentlyPurchasedSection> {
+  final ScrollController _scrollController = ScrollController();
+  bool _canScrollLeft = false;
+  bool _canScrollRight = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_checkScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkScroll());
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _checkScroll() {
+    if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.offset;
+    // Tolerance of 1.0
+    bool canLeft = currentScroll > 1.0;
+    bool canRight = currentScroll < maxScroll - 1.0;
+    
+    if (canLeft != _canScrollLeft || canRight != _canScrollRight) {
+       setState(() {
+         _canScrollLeft = canLeft;
+         _canScrollRight = canRight;
+       });
+    }
+  }
+
+  List<Product> _getProducts() {
+    if (widget.appState.orders.isNotEmpty) {
+       final purchasedIds = widget.appState.orders.expand((o) => o.items).map((i) => i.productId).toSet();
+       final purchased = widget.appState.products.where((p) => purchasedIds.contains(p.id)).take(10).toList();
+       if (purchased.isNotEmpty) return purchased;
+    }
+    return widget.appState.products.where((p) => p.isTrending).take(10).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final products = _getProducts();
     if (products.isEmpty) return const SizedBox.shrink();
 
-    final title = appState.orders.isNotEmpty && products.any((p) => appState.orders.expand((o)=>o.items).any((i)=>i.productId==p.id)) 
+    final title = widget.appState.orders.isNotEmpty && products.any((p) => widget.appState.orders.expand((o)=>o.items).any((i)=>i.productId==p.id)) 
       ? 'Recently Purchased' 
       : 'You Might Also Like';
+
+    // Responsive Logic
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
+    double cardWidth = 180;
+    double cardHeight = 280;
+
+    if (isMobile) {
+      // Mobile: 2 cards per row.
+      // Padding: 16 (left) + 16 (right) = 32
+      // Gap: 16
+      // Formula: (ScreenWidth - 32 - 16) / 2
+      final availableWidth = screenWidth - 32; 
+      cardWidth = (availableWidth - 16) / 2;
+      cardHeight = cardWidth * 1.55; // Aspect ratio to ensure content fits
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
          Padding(
-           padding: const EdgeInsets.only(left: 4, bottom: 16),
-           child: Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 20, fontWeight: FontWeight.bold)),
+           padding: const EdgeInsets.only(left: 4, bottom: 16, right: 4),
+           child: Row(
+             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+             children: [
+               Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 20, fontWeight: FontWeight.bold)),
+               Row(
+                 children: [
+                   IconButton(
+                     icon: const Icon(Icons.arrow_back_ios, size: 16),
+                     color: _canScrollLeft ? Theme.of(context).iconTheme.color : Colors.grey.withOpacity(0.3),
+                     onPressed: _canScrollLeft ? () {
+                        _scrollController.animateTo(
+                          (_scrollController.offset - (cardWidth + 16)).clamp(0.0, _scrollController.position.maxScrollExtent),
+                          duration: const Duration(milliseconds: 300), 
+                          curve: Curves.easeOut
+                        );
+                     } : null,
+                   ),
+                   IconButton(
+                     icon: const Icon(Icons.arrow_forward_ios, size: 16),
+                     color: _canScrollRight ? Theme.of(context).iconTheme.color : Colors.grey.withOpacity(0.3),
+                     onPressed: _canScrollRight ? () {
+                         _scrollController.animateTo(
+                          (_scrollController.offset + (cardWidth + 16)).clamp(0.0, _scrollController.position.maxScrollExtent),
+                          duration: const Duration(milliseconds: 300), 
+                          curve: Curves.easeOut
+                        );
+                     } : null,
+                   ),
+                 ],
+               )
+             ],
+           ),
          ),
          SizedBox(
-           height: 280,
+           height: cardHeight,
            child: ListView.separated(
+             controller: _scrollController,
              scrollDirection: Axis.horizontal,
              itemCount: products.length,
              separatorBuilder: (ctx, i) => const SizedBox(width: 16),
              itemBuilder: (ctx, index) {
                return SizedBox(
-                 width: 180,
+                 width: cardWidth,
                  child: ProductCard(
                    product: products[index],
                    showBadges: true,
@@ -645,4 +753,5 @@ Widget _buildSuggestionsSection(BuildContext context, AppState appState) {
          ),
       ],
     );
+  }
 }

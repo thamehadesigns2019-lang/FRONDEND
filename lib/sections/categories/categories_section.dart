@@ -56,6 +56,7 @@ class CategoriesSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
+    final isSmallMobile = screenWidth < 400; // Check for small screens
     
     return Container(
       padding: EdgeInsets.symmetric(
@@ -78,7 +79,7 @@ class CategoriesSection extends StatelessWidget {
                       'Shop by Category',
                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.bold,
-                            fontSize: isMobile ? 28 : 32,
+                            fontSize: isSmallMobile ? 22 : (isMobile ? 28 : 32),
                             letterSpacing: 1.0,
                           ),
                     ),

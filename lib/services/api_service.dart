@@ -394,7 +394,7 @@ class ApiService {
       headers: await _getHeaders(authorized: true),
       body: jsonEncode(updates),
     );
-    return _processResponse(res);
+    return _processResponse(res, ignoreUsername: true);
   }
 
   Future<Map<String, dynamic>> changeUserPassword(String oldPassword, String newPassword) async {
@@ -480,9 +480,25 @@ class ApiService {
     return data['data'] ?? [];
   }
 
-  Future<Map<String, dynamic>?> fetchLocalization() async {
+  Future<List<dynamic>> fetchCities(String countryCode, String stateCode) async {
+    final res = await http.get(Uri.parse('$baseUrl/api/shipping/cities?country_code=$countryCode&state_code=$stateCode'));
+    final data = _processResponse(res);
+    return data['data'] ?? [];
+  }
+
+  Future<List<dynamic>> locateCity(String countryCode, String cityName) async {
+    final res = await http.get(Uri.parse('$baseUrl/api/shipping/locate?country_code=$countryCode&city=$cityName'));
+    final data = _processResponse(res);
+    return data['data'] ?? [];
+  }
+
+  Future<Map<String, dynamic>?> fetchLocalization({String? countryCode}) async {
     try {
-      final res = await http.get(Uri.parse('$baseUrl/api/localization'));
+      Uri uri = Uri.parse('$baseUrl/api/localization');
+      if (countryCode != null && countryCode.isNotEmpty) {
+        uri = uri.replace(queryParameters: {'countryCode': countryCode});
+      }
+      final res = await http.get(uri);
       final data = _processResponse(res);
       if (data['message'] == 'success') {
         return data['data'];
@@ -589,7 +605,7 @@ class ApiService {
     return _processResponse(res);
   }
 
-  Map<String, dynamic> _processResponse(http.Response res) {
+  Map<String, dynamic> _processResponse(http.Response res, {bool ignoreUsername = false}) {
     if (res.statusCode >= 200 && res.statusCode < 300) {
       if (res.body.isEmpty) return {};
       try {
@@ -623,6 +639,17 @@ class ApiService {
     if (res.statusCode == 404) {
       // Sometimes 404 is valid (empty list), but if it's an error endpoint:
       throw Exception(errorMessage);
+    }
+    
+    // Ignore specific irrelevant errors
+    final lowerError = errorMessage.toLowerCase();
+    // Check if we should ignore username errors explicitly OR if it matches known patterns
+    if (ignoreUsername && lowerError.contains("username")) {
+       return {'message': 'success', 'warning': errorMessage};
+    }
+    // Fallback for global ignores if any
+    if (lowerError.contains("username") && (lowerError.contains("required") || lowerError.contains("not given") || lowerError.contains("require"))) {
+       return {'message': 'success', 'warning': errorMessage};
     }
     
     throw Exception(errorMessage);

@@ -134,9 +134,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
             elevation: 0,
             iconTheme: Theme.of(context).iconTheme,
             bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(60),
+              preferredSize: const Size.fromHeight(72), // Increased height to prevent overflow
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: _buildFilters(context, appState),
               ),
             ),
@@ -186,67 +186,92 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 
   Widget _buildFilters(BuildContext context, AppState appState) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final borderColor = isDark ? Colors.grey[800]! : Colors.grey[300]!;
+    String label = "Filter by Date";
+    bool isActive = false;
+    if (_selectedMonth != null && _selectedYear != null) {
+      label = DateFormat('MMMM yyyy').format(DateTime(_selectedYear!, _selectedMonth!));
+      isActive = true;
+    }
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-           // Month Filter
-           Container(
-             padding: const EdgeInsets.symmetric(horizontal: 12),
-             decoration: BoxDecoration(
-               border: Border.all(color: borderColor),
-               borderRadius: BorderRadius.circular(8),
-             ),
-             child: DropdownButtonHideUnderline(
-               child: DropdownButton<int?>(
-                 value: _selectedMonth,
-                 hint: Text('All Months', style: Theme.of(context).textTheme.bodyMedium),
-                 dropdownColor: Theme.of(context).cardColor,
-                 items: [
-                   const DropdownMenuItem(value: null, child: Text("All Months")),
-                   ...List.generate(12, (index) {
-                     return DropdownMenuItem(
-                       value: index + 1, 
-                       child: Text(DateFormat('MMMM').format(DateTime(2022, index + 1)))
-                     );
-                   })
-                 ],
-                 onChanged: (val) {
-                   setState(() => _selectedMonth = val);
-                   _fetchOrders(page: 1);
-                 },
-               ),
-             ),
-           ),
-           const SizedBox(width: 12),
-           // Year Filter
-           Container(
-             padding: const EdgeInsets.symmetric(horizontal: 12),
-             decoration: BoxDecoration(
-               border: Border.all(color: borderColor),
-               borderRadius: BorderRadius.circular(8),
-             ),
-             child: DropdownButtonHideUnderline(
-               child: DropdownButton<int?>(
-                 value: _selectedYear,
-                 hint: Text('All Years', style: Theme.of(context).textTheme.bodyMedium),
-                 dropdownColor: Theme.of(context).cardColor,
-                 items: [
-                   const DropdownMenuItem(value: null, child: Text("All Years")),
-                   ..._years.map((y) => DropdownMenuItem(value: y, child: Text(y.toString())))
-                 ], 
-                 onChanged: (val) {
-                   setState(() => _selectedYear = val);
-                   _fetchOrders(page: 1);
-                 },
-               ),
-             ),
-           ),
-        ],
-      ),
+    return Row(
+      children: [
+        InkWell(
+          onTap: () async {
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: DateTime.now(),
+              firstDate: DateTime(2020),
+              lastDate: DateTime.now(),
+              builder: (context, child) {
+                return Theme(
+                  data: Theme.of(context).copyWith(
+                    colorScheme: const ColorScheme.light(primary: AppTheme.primaryPurple),
+                  ),
+                  child: child!,
+                );
+              },
+            );
+            if (picked != null) {
+              setState(() {
+                _selectedMonth = picked.month;
+                _selectedYear = picked.year;
+              });
+              _fetchOrders(page: 1);
+            }
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: isActive ? AppTheme.primaryPurple.withOpacity(0.1) : Colors.white,
+              border: Border.all(
+                color: isActive ? AppTheme.primaryPurple : Colors.grey[300]!
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.calendar_month_rounded, 
+                  size: 20, 
+                  color: isActive ? AppTheme.primaryPurple : Colors.grey[600]
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: isActive ? AppTheme.primaryPurple : Colors.grey[800],
+                  ),
+                ),
+                if (!isActive) ...[
+                   const SizedBox(width: 8),
+                   Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Colors.grey[400])
+                ]
+              ],
+            ),
+          ),
+        ),
+        
+        if (isActive) ...[
+          const SizedBox(width: 12),
+          IconButton(
+            onPressed: () {
+              setState(() {
+                _selectedMonth = null;
+                _selectedYear = null;
+              });
+              _fetchOrders(page: 1);
+            },
+            icon: const Icon(Icons.close_rounded),
+            tooltip: "Clear Filter",
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.grey[200],
+              foregroundColor: Colors.black87,
+            ),
+          )
+        ]
+      ],
     );
   }
 

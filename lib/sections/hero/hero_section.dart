@@ -51,6 +51,7 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
+    final isSmallMobile = screenWidth < 400;
     
     return FutureBuilder<Map<String, dynamic>?>(
       future: Provider.of<AppState>(context, listen: false).apiService.fetchUiSection('hero'),
@@ -122,7 +123,7 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                             'ELEVATE YOUR STYLE',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: isMobile ? 32 : 48,
+                              fontSize: isSmallMobile ? 24 : (isMobile ? 32 : 48),
                               fontWeight: FontWeight.w300,
                               color: Colors.white,
                               height: 1.1,
@@ -144,7 +145,7 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                             'Discover the latest trends in fashion and accessories.\nPremium quality, exclusive designs.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: isMobile ? 14 : 16,
+                              fontSize: isSmallMobile ? 12 : (isMobile ? 14 : 16),
                               color: Colors.white70,
                               height: 1.8,
                               letterSpacing: 1.2,
@@ -177,6 +178,7 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                           ),
                         ),
                       ),
+
                     ],
                   ),
                 ),

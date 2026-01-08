@@ -22,6 +22,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final TextEditingController _ageController = TextEditingController();
   final TextEditingController _countryController = TextEditingController();
   String? _selectedGender;
+  String? _selectedCountry;
+
+  final List<Map<String, String>> _countries = [
+    {'code': 'IN', 'name': 'India'},
+    {'code': 'US', 'name': 'United States'},
+    {'code': 'GB', 'name': 'United Kingdom'},
+    {'code': 'AE', 'name': 'United Arab Emirates'},
+    {'code': 'SA', 'name': 'Saudi Arabia'},
+    {'code': 'KW', 'name': 'Kuwait'},
+    {'code': 'QA', 'name': 'Qatar'},
+    {'code': 'OM', 'name': 'Oman'},
+    {'code': 'BH', 'name': 'Bahrain'},
+    {'code': 'CA', 'name': 'Canada'},
+    {'code': 'AU', 'name': 'Australia'},
+    {'code': 'DE', 'name': 'Germany'},
+  ];
 
   // Password Change
   final _passwordFormKey = GlobalKey<FormState>();
@@ -48,7 +64,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _nameController.text = userData['full_name'] ?? _username;
           if (userData['age'] != null) _ageController.text = userData['age'].toString();
           if (userData['gender'] != null) _selectedGender = userData['gender'];
-          if (userData['country_code'] != null) _countryController.text = userData['country_code'];
+          if (userData['country_code'] != null) {
+            _countryController.text = userData['country_code'];
+            final code = userData['country_code'].toString().toUpperCase();
+            if (_countries.any((c) => c['code'] == code)) {
+               _selectedCountry = code;
+            } else {
+               _selectedCountry = null; 
+            }
+          }
         });
       }
     } catch (e) {
@@ -128,9 +152,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         elevation: 0,
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.black),
-        titleTextStyle: const TextStyle(
+        titleTextStyle: TextStyle(
           color: Colors.black,
-          fontSize: 18,
+          fontSize: MediaQuery.of(context).size.width < 600 ? 14 : 18,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -164,82 +188,87 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProfileHeader() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: AppTheme.primaryPurple.withOpacity(0.2), width: 2),
-            ),
-            child: CircleAvatar(
-              radius: 40,
-              backgroundColor: AppTheme.primaryPurple.withOpacity(0.1),
-              child: Text(
-                _username.isNotEmpty ? _username[0].toUpperCase() : '?',
-                style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryPurple,
-                ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isSmall = constraints.maxWidth < 600;
+        return Container(
+          padding: EdgeInsets.all(isSmall ? 16 : 24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
               ),
-            ),
+            ],
           ),
-          const SizedBox(width: 24),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _username,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppTheme.primaryPurple.withOpacity(0.2), width: 2),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  _email,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'Active Account',
+                child: CircleAvatar(
+                  radius: isSmall ? 30 : 40,
+                  backgroundColor: AppTheme.primaryPurple.withOpacity(0.1),
+                  child: Text(
+                    _username.isNotEmpty ? _username[0].toUpperCase() : '?',
                     style: TextStyle(
-                      color: Colors.green,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      fontSize: isSmall ? 24 : 32,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryPurple,
                     ),
                   ),
-                )
-              ],
-            ),
+                ),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _username,
+                      style: TextStyle(
+                        fontSize: isSmall ? 18 : 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _email,
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: isSmall ? 12 : 16,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'Active Account',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontSize: isSmall ? 10 : 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    )
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      }
     );
   }
 
@@ -259,158 +288,189 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProfileForm(AppState appState) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          children: [
-            TextFormField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                labelText: 'Full Name',
-                prefixIcon: const Icon(Icons.person_outline_rounded),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppTheme.primaryPurple, width: 2),
-                ),
-                filled: true,
-                fillColor: Colors.grey.shade50,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isSmall = constraints.maxWidth < 600;
+        final double inputFontSize = isSmall ? 14.0 : 16.0;
+        final double iconSize = isSmall ? 20.0 : 24.0;
+        final EdgeInsets contentPadding = isSmall 
+            ? const EdgeInsets.symmetric(horizontal: 12, vertical: 12)
+            : const EdgeInsets.symmetric(horizontal: 16, vertical: 16);
+
+        InputDecoration inputDecoration(String label, IconData icon) {
+          return InputDecoration(
+            labelText: label,
+            labelStyle: TextStyle(fontSize: inputFontSize),
+            prefixIcon: Icon(icon, size: iconSize),
+            contentPadding: contentPadding,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppTheme.primaryPurple, width: 2)),
+            filled: true,
+            fillColor: Colors.grey.shade50,
+          );
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
               ),
-              validator: (value) => value!.isEmpty ? 'Name cannot be empty' : null,
-            ),
-            const SizedBox(height: 20),
-            
-            Row(
+            ],
+          ),
+          child: Form(
+            key: _formKey,
+            child: Column(
               children: [
-                Expanded(
-                  child: TextFormField(
+                TextFormField(
+                  controller: _nameController,
+                  style: TextStyle(fontSize: inputFontSize),
+                  decoration: inputDecoration('Full Name', Icons.person_outline_rounded),
+                  validator: (value) => value!.isEmpty ? 'Name cannot be empty' : null,
+                ),
+                const SizedBox(height: 20),
+                
+                // Age and Gender
+                if (isSmall) ...[
+                  TextFormField(
                     controller: _ageController,
                     keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                        labelText: 'Age',
-                        prefixIcon: const Icon(Icons.cake_outlined),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
+                    style: TextStyle(fontSize: inputFontSize),
+                    decoration: inputDecoration('Age', Icons.cake_outlined),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: DropdownButtonFormField<String>(
+                  const SizedBox(height: 20),
+                  DropdownButtonFormField<String>(
                     value: _selectedGender,
-                    decoration: InputDecoration(
-                        labelText: 'Gender',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                    ),
+                    style: TextStyle(fontSize: inputFontSize, color: Colors.black),
+                    decoration: inputDecoration('Gender', Icons.wc),
                     items: ['male', 'female', 'other'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                     onChanged: (val) => setState(() => _selectedGender = val),
+                  ),
+                ] else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _ageController,
+                          keyboardType: TextInputType.number,
+                          decoration: inputDecoration('Age', Icons.cake_outlined),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: _selectedGender,
+                          decoration: inputDecoration('Gender', Icons.wc),
+                          items: ['male', 'female', 'other'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                          onChanged: (val) => setState(() => _selectedGender = val),
+                        ),
+                      ),
+                    ],
+                  ),
+                
+                const SizedBox(height: 20),
+                
+                // Country Dropdown
+                DropdownButtonFormField<String>(
+                  value: _selectedCountry,
+                  isExpanded: true, // Fix for overflow
+                  style: TextStyle(fontSize: inputFontSize, color: Colors.black),
+                  decoration: inputDecoration('Country', Icons.public),
+                  items: _countries.map((c) {
+                    return DropdownMenuItem(
+                      value: c['code'],
+                      child: Text(
+                        "${c['name']} (${c['code']})", 
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: inputFontSize)
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedCountry = val;
+                      _countryController.text = val ?? '';
+                    });
+                  },
+                ),
+
+                const SizedBox(height: 20),
+                TextFormField(
+                  initialValue: _email,
+                  enabled: false,
+                  style: TextStyle(fontSize: inputFontSize),
+                  decoration: inputDecoration('Email Address', Icons.email_outlined).copyWith(
+                    fillColor: Colors.grey.shade100,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Currency / Region Info
+                 Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blue.withOpacity(0.1)),
+                  ),
+                  child: Row(
+                    children: [
+                       Icon(Icons.info_outline, color: Colors.blue, size: iconSize),
+                       const SizedBox(width: 16),
+                       Expanded(
+                         child: Column(
+                           crossAxisAlignment: CrossAxisAlignment.start,
+                           children: [
+                             Text(
+                               'Regional Settings',
+                               style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue, fontSize: inputFontSize),
+                             ),
+                             Text(
+                               'Currency detected: ${appState.userSettings.preferredCurrency}',
+                               style: TextStyle(fontSize: inputFontSize - 2, color: Colors.blue[800]),
+                             ),
+                           ],
+                         ),
+                       ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48, // Slightly smaller height
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _updateProfile,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryPurple,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: _isLoading 
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : Text('Update Profile', style: TextStyle(fontSize: inputFontSize, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            
-            TextFormField(
-              controller: _countryController,
-              decoration: InputDecoration(
-                labelText: 'Country Code (e.g. IN, AE)',
-                helperText: "Used for currency & pricing",
-                prefixIcon: const Icon(Icons.flag_outlined),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              maxLength: 2,
-            ),
-            const SizedBox(height: 20),
-            TextFormField(
-              initialValue: _email,
-              enabled: false,
-              decoration: InputDecoration(
-                labelText: 'Email Address',
-                prefixIcon: const Icon(Icons.email_outlined),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
-                fillColor: Colors.grey.shade100,
-              ),
-            ),
-            const SizedBox(height: 20),
-            // Currency / Region Info
-             Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue.withOpacity(0.1)),
-              ),
-              child: Row(
-                children: [
-                   const Icon(Icons.public, color: Colors.blue),
-                   const SizedBox(width: 16),
-                   Expanded(
-                     child: Column(
-                       crossAxisAlignment: CrossAxisAlignment.start,
-                       children: [
-                         const Text(
-                           'Regional Settings',
-                           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
-                         ),
-                         Text(
-                           'Currency detected: ${appState.userSettings.preferredCurrency}',
-                           style: TextStyle(fontSize: 12, color: Colors.blue[800]),
-                         ),
-                       ],
-                     ),
-                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _updateProfile,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryPurple,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: _isLoading 
-                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Text('Update Profile', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      }
     );
   }
 
+  final GlobalKey _passwordSectionKey = GlobalKey();
+
   Widget _buildPasswordSection() {
     return Container(
+      key: _passwordSectionKey,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -440,6 +500,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               setState(() {
                 _isPasswordExpanded = !_isPasswordExpanded;
               });
+              if (_isPasswordExpanded) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (_passwordSectionKey.currentContext != null) {
+                    Scrollable.ensureVisible(
+                      _passwordSectionKey.currentContext!,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      alignment: 0.0, // align to top
+                    );
+                  }
+                });
+              }
             },
           ),
           if (_isPasswordExpanded) ...[

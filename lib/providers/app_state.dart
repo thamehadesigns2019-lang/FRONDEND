@@ -31,7 +31,11 @@ class AppState with ChangeNotifier {
 
   Future<void> _initializeLocalization() async {
     try {
-      final data = await _apiService.fetchLocalization(); 
+      String? countryCode;
+      if (_currentUserProfile.isNotEmpty) {
+         countryCode = _currentUserProfile['country_code'] ?? _currentUserProfile['countryCode'];
+      }
+      final data = await _apiService.fetchLocalization(countryCode: countryCode); 
       if (data != null) {
         _currencySymbol = data['symbol'] ?? '\$';
         _exchangeRate = (data['exchange_rate'] ?? 1.0).toDouble();
@@ -73,82 +77,9 @@ class AppState with ChangeNotifier {
              final locale = PlatformDispatcher.instance.locale;
              countryCode = locale.countryCode?.toUpperCase() ?? 'US';
         }
-
-        String assignedCurrency = 'USD';
-        String assignedSymbol = '\$';
-
-        // Precise Mapping
-        switch (countryCode) {
-          case 'IN': 
-            assignedCurrency = 'INR';
-            assignedSymbol = '₹';
-            break;
-          case 'GB':
-          case 'UK':
-            assignedCurrency = 'GBP';
-            assignedSymbol = '£';
-            break;
-          case 'AE':
-            assignedCurrency = 'AED';
-            assignedSymbol = 'د.إ';
-            break;
-          case 'SA':
-            assignedCurrency = 'SAR';
-            assignedSymbol = '﷼';
-            break;
-          case 'KW':
-            assignedCurrency = 'KWD';
-            assignedSymbol = 'Kd';
-            break;
-          case 'QA':
-            assignedCurrency = 'QAR';
-            assignedSymbol = '﷼';
-            break;
-          case 'OM':
-            assignedCurrency = 'OMR';
-            assignedSymbol = '﷼';
-            break;
-          case 'BH':
-            assignedCurrency = 'BHD';
-            assignedSymbol = '.د.ب';
-            break;
-          case 'JP':
-            assignedCurrency = 'JPY';
-            assignedSymbol = '¥';
-            break;
-          case 'CN':
-            assignedCurrency = 'CNY';
-            assignedSymbol = '¥';
-            break;
-          case 'AU':
-            assignedCurrency = 'AUD';
-            assignedSymbol = 'A\$';
-            break;
-          case 'CA':
-            assignedCurrency = 'CAD';
-            assignedSymbol = 'C\$';
-            break;
-          // Eurozone check
-          case 'DE': case 'FR': case 'IT': case 'ES': case 'NL': case 'BE': 
-          case 'AT': case 'GR': case 'PT': case 'FI': case 'IE':
-            assignedCurrency = 'EUR';
-            assignedSymbol = '€';
-            break;
-          default:
-            assignedCurrency = 'USD';
-            assignedSymbol = '\$';
-        }
         
-        _currencySymbol = assignedSymbol;
-        
-        // Update user settings if it differs from what we detected
-        if (_userSettings.preferredCurrency != assignedCurrency) {
-             _userSettings = UserSettings(
-                enableNotifications: _userSettings.enableNotifications,
-                darkMode: _userSettings.darkMode,
-                preferredCurrency: assignedCurrency
-             );
-        }
+        _applyCurrencyForCountry(countryCode);
+
       } catch (e) {
         print("Fallback currency error: $e");
         _currencySymbol = '\$';
@@ -221,8 +152,84 @@ class AppState with ChangeNotifier {
       // If profile is empty but authenticated, maybe we haven't fetched it yet. 
       // But we call fetchUserProfile in fetchAllData.
       if (_currentUserProfile.isEmpty) return false; // Don't annoy if not loaded
-      final country = _currentUserProfile['country_code'];
+      final country = _currentUserProfile['country_code'] ?? _currentUserProfile['countryCode'];
       return country == null || country.toString().isEmpty;
+  }
+
+  void _applyCurrencyForCountry(String countryCode) {
+    String assignedCurrency = 'USD';
+    String assignedSymbol = '\$';
+
+    switch (countryCode.toUpperCase()) {
+      case 'IN': 
+        assignedCurrency = 'INR';
+        assignedSymbol = '₹';
+        break;
+      case 'GB':
+      case 'UK':
+        assignedCurrency = 'GBP';
+        assignedSymbol = '£';
+        break;
+      case 'AE':
+        assignedCurrency = 'AED';
+        assignedSymbol = 'د.إ';
+        break;
+      case 'SA':
+        assignedCurrency = 'SAR';
+        assignedSymbol = '﷼';
+        break;
+      case 'KW':
+        assignedCurrency = 'KWD';
+        assignedSymbol = 'Kd';
+        break;
+      case 'QA':
+        assignedCurrency = 'QAR';
+        assignedSymbol = '﷼';
+        break;
+      case 'OM':
+        assignedCurrency = 'OMR';
+        assignedSymbol = '﷼';
+        break;
+      case 'BH':
+        assignedCurrency = 'BHD';
+        assignedSymbol = '.د.ب';
+        break;
+      case 'JP':
+        assignedCurrency = 'JPY';
+        assignedSymbol = '¥';
+        break;
+      case 'CN':
+        assignedCurrency = 'CNY';
+        assignedSymbol = '¥';
+        break;
+      case 'AU':
+        assignedCurrency = 'AUD';
+        assignedSymbol = 'A\$';
+        break;
+      case 'CA':
+        assignedCurrency = 'CAD';
+        assignedSymbol = 'C\$';
+        break;
+      case 'DE': case 'FR': case 'IT': case 'ES': case 'NL': case 'BE': 
+      case 'AT': case 'GR': case 'PT': case 'FI': case 'IE':
+        assignedCurrency = 'EUR';
+        assignedSymbol = '€';
+        break;
+      default:
+        assignedCurrency = 'USD';
+        assignedSymbol = '\$';
+    }
+    
+    _currencySymbol = assignedSymbol;
+    // We do NOT update exchange rate here blindly as we don't have it locally.
+    // However, if we forced the symbol, we should ensure the currency code matches.
+    if (_userSettings.preferredCurrency != assignedCurrency) {
+          _userSettings = UserSettings(
+            enableNotifications: _userSettings.enableNotifications,
+            darkMode: _userSettings.darkMode,
+            preferredCurrency: assignedCurrency
+          );
+    }
   }
 
   int get selectedTabIndex => _selectedTabIndex;

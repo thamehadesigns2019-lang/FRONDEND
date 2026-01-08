@@ -37,6 +37,8 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isSmall = MediaQuery.of(context).size.width < 600;
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -45,9 +47,9 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
         elevation: 0,
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.black),
-        titleTextStyle: const TextStyle(
+        titleTextStyle: TextStyle(
           color: Colors.black,
-          fontSize: 18,
+          fontSize: isSmall ? 16 : 18,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -57,25 +59,25 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 800),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
+                  padding: EdgeInsets.all(isSmall ? 16 : 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                       _buildContactCard(),
+                       _buildContactCard(isSmall),
                        const SizedBox(height: 32),
                        Padding(
                          padding: const EdgeInsets.only(left: 4, bottom: 16),
                          child: Text(
                           'FREQUENTLY ASKED QUESTIONS',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: isSmall ? 12 : 14,
                             fontWeight: FontWeight.w700,
                             color: Colors.grey[600],
                             letterSpacing: 1.2,
                           ),
                         ),
                        ),
-                      ..._faqs.map((faq) => _buildFaqTile(faq)),
+                      ..._faqs.map((faq) => _buildFaqTile(faq, isSmall)),
                     ],
                   ),
                 ),
@@ -84,9 +86,9 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
     );
   }
 
-  Widget _buildContactCard() {
+  Widget _buildContactCard(bool isSmall) {
     return Container(
-      padding: const EdgeInsets.all(32),
+      padding: EdgeInsets.all(isSmall ? 20 : 32),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -101,18 +103,18 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isSmall ? 12 : 16),
             decoration: BoxDecoration(
               color: const Color(0xFF11998e).withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.support_agent_rounded, size: 48, color: Color(0xFF11998e)),
+            child: Icon(Icons.support_agent_rounded, size: isSmall ? 36 : 48, color: const Color(0xFF11998e)),
           ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'How can we help you?',
             style: TextStyle(
-              fontSize: 24,
+              fontSize: isSmall ? 20 : 24,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
             ),
@@ -121,12 +123,12 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
           Text(
             'Our dedicated support team is available 24/7 to assist you with any questions or issues.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey[600], fontSize: 16, height: 1.5),
+            style: TextStyle(color: Colors.grey[600], fontSize: isSmall ? 14 : 16, height: 1.5),
           ),
           const SizedBox(height: 32),
           SizedBox(
             width: double.infinity,
-            height: 50,
+            height: isSmall ? 44 : 50,
             child: ElevatedButton.icon(
               onPressed: () {
                  Navigator.push(
@@ -134,8 +136,8 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                   MaterialPageRoute(builder: (_) => const SupportChatScreen())
                 );
               },
-              icon: const Icon(Icons.chat_bubble_outline),
-              label: const Text('Chat with Support Agent', style: TextStyle(fontWeight: FontWeight.bold)),
+              icon: Icon(Icons.chat_bubble_outline, size: isSmall ? 20 : 24),
+              label: Text('Chat with Support Agent', style: TextStyle(fontWeight: FontWeight.bold, fontSize: isSmall ? 14 : 16)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.black,
                 foregroundColor: Colors.white,
@@ -151,7 +153,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
     );
   }
 
-  Widget _buildFaqTile(dynamic faq) {
+  Widget _buildFaqTile(dynamic faq, bool isSmall) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -169,13 +171,13 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          childrenPadding: const EdgeInsets.only(left: 24, right: 24, bottom: 24),
+          tilePadding: EdgeInsets.symmetric(horizontal: isSmall ? 16 : 24, vertical: isSmall ? 4 : 8),
+          childrenPadding: EdgeInsets.only(left: isSmall ? 16 : 24, right: isSmall ? 16 : 24, bottom: isSmall ? 16 : 24),
           title: Text(
             faq['question'] ?? '',
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w600,
-              fontSize: 16,
+              fontSize: isSmall ? 14 : 16,
               color: Colors.black87
             ),
           ),
@@ -186,7 +188,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
               faq['answer'] ?? '',
               style: TextStyle(
                 color: Colors.grey[700],
-                fontSize: 15,
+                fontSize: isSmall ? 13 : 15,
                 height: 1.6
               ),
             ),

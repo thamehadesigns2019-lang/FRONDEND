@@ -380,7 +380,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                "Don't have an account? ",
+                                "New user? ",
                                 style: TextStyle(
                                   color: Colors.grey.shade600,
                                   fontSize: 14,

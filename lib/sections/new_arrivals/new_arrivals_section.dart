@@ -37,6 +37,7 @@ class _NewArrivalsSectionState extends State<NewArrivalsSection> with SingleTick
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
+    final isSmallMobile = screenWidth < 400;
     
     // Calculate card width based on screen size
     double cardWidth;
@@ -90,7 +91,7 @@ class _NewArrivalsSectionState extends State<NewArrivalsSection> with SingleTick
                             'New Arrivals',
                             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: isMobile ? 28 : 32, // Larger font
+                                  fontSize: isSmallMobile ? 22 : (isMobile ? 28 : 32), // Larger font
                                   letterSpacing: 1.0,
                                 ),
                           ),
@@ -102,7 +103,7 @@ class _NewArrivalsSectionState extends State<NewArrivalsSection> with SingleTick
                           CurvedAnimation(parent: _controller, curve: const Interval(0.3, 0.8, curve: Curves.elasticOut)),
                         ),
                         child: Container(
-                          width: 80, // Longer line
+                          width: isSmallMobile ? 60 : 80, // Longer line
                           height: 4,
                           decoration: BoxDecoration(
                             color: Colors.black, // Solid black
@@ -129,13 +130,13 @@ class _NewArrivalsSectionState extends State<NewArrivalsSection> with SingleTick
                          Text(
                           'View All',
                           style: TextStyle(
-                            fontSize: isMobile ? 14 : 16, 
+                            fontSize: isSmallMobile ? 12 : (isMobile ? 14 : 16), 
                             fontWeight: FontWeight.w600,
                             letterSpacing: 1.0
                           ),
                         ),
                         const SizedBox(width: 8),
-                        const Icon(Icons.arrow_forward, size: 16),
+                         Icon(Icons.arrow_forward, size: isSmallMobile ? 14 : 16),
                       ],
                     ),
                   ),

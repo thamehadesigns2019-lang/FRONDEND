@@ -698,25 +698,25 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: _getCurrentStock(product) > 0
                                     ? AppTheme.successGreen.withOpacity(0.1)
                                     : AppTheme.errorRed.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(20),
+                                borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
                                 _getCurrentStock(product) > 0 
                                    ? (_getCurrentStock(product) <= 10 
                                       ? 'Only ${_getCurrentStock(product) % 1 == 0 ? _getCurrentStock(product).toInt() : _getCurrentStock(product).toStringAsFixed(1)} left!' 
-                                      : 'In Stock: ${_getCurrentStock(product) % 1 == 0 ? _getCurrentStock(product).toInt() : _getCurrentStock(product).toStringAsFixed(1)}') 
+                                      : 'In Stock')
                                    : 'Out of Stock',
                                 style: TextStyle(
                                   color: _getCurrentStock(product) > 0
                                       ? AppTheme.successGreen
                                       : AppTheme.errorRed,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 12,
+                                  fontSize: 10,
                                 ),
                               ),
                             ),
@@ -730,29 +730,34 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         // ... (Rest of existing mobile UI logic, simplified for brevity in this replacement)
                         // I will inline the rest of the existing logic to ensure it works
                         const SizedBox(height: 8),
-                         Row(
-                          children: [
-                            Text(
-                              '${appState.currencySymbol}${appState.getPrice(product.getPriceWithTax(_getCurrentPrice(product))).toStringAsFixed(2)} / ${product.formattedUnit}',
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.primaryPurple,
-                              ),
-                            ),
-                            const Spacer(),
-                            const Icon(Icons.star, color: AppTheme.warningOrange, size: 20),
-                            const SizedBox(width: 4),
-                            Text(
-                              _reviews.isNotEmpty
-                                  ? (_reviews.map((r) => r.rating).reduce((a, b) => a + b) / _reviews.length).toStringAsFixed(1)
-                                  : 'N/A',
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(width: 4),
-                            Text('(${_reviews.length} reviews)', style: TextStyle(color: Colors.grey.shade600)),
-                          ],
-                        ),
+                         Column(
+                           crossAxisAlignment: CrossAxisAlignment.start,
+                           children: [
+                             Text(
+                               '${appState.currencySymbol}${appState.getPrice(product.getPriceWithTax(_getCurrentPrice(product))).toStringAsFixed(2)} / ${product.formattedUnit}',
+                               style: const TextStyle(
+                                 fontSize: 24,
+                                 fontWeight: FontWeight.bold,
+                                 color: AppTheme.primaryPurple,
+                               ),
+                             ),
+                             const SizedBox(height: 8),
+                             Row(
+                               children: [
+                                 const Icon(Icons.star, color: AppTheme.warningOrange, size: 18),
+                                 const SizedBox(width: 4),
+                                 Text(
+                                   _reviews.isNotEmpty
+                                       ? (_reviews.map((r) => r.rating).reduce((a, b) => a + b) / _reviews.length).toStringAsFixed(1)
+                                       : 'N/A',
+                                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                 ),
+                                 const SizedBox(width: 4),
+                                 Text('(${_reviews.length} reviews)', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                               ],
+                             ),
+                           ],
+                         ),
                         const SizedBox(height: 24),
                         
                         if (product.variants.isNotEmpty) ...[
@@ -866,7 +871,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       onTap: () => _handleVariantSelection(product, name, valueStr),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16), // Larger Padding
+                        padding: MediaQuery.of(context).size.width < 900 
+                            ? const EdgeInsets.symmetric(horizontal: 16, vertical: 12) // Smaller Padding
+                            : const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                         decoration: BoxDecoration(
                           color: isSelected ? AppTheme.primaryPurple : Colors.white,
                           borderRadius: BorderRadius.circular(12),
@@ -878,7 +885,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           style: TextStyle(
                             color: isSelected ? Colors.white : Colors.black87, 
                             fontWeight: FontWeight.bold,
-                            fontSize: 16 // Larger Font
+                            fontSize: MediaQuery.of(context).size.width < 900 ? 14 : 16 // Smaller Font for mobile
                           )
                         ),
                       ),
@@ -1093,76 +1100,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         const SizedBox(height: 32),
 
         // Horizontal Review List
-        if (reviewsToShow.isNotEmpty) ...[
-          const Text("Customer Reviews", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          
-          SizedBox(
-            height: 220, // Fixed height for the horizontal list
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: reviewsToShow.length,
-              separatorBuilder: (context, index) => const SizedBox(width: 16),
-              itemBuilder: (context, index) {
-                final review = reviewsToShow[index];
-                return Container(
-                  width: 300, // Fixed width for each review card
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 4))],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                       Row(
-                         children: [
-                            CircleAvatar(
-                              radius: 16,
-                              backgroundColor: _getAvatarColor(review.username),
-                              child: Text(review.username.isNotEmpty ? review.username[0].toUpperCase() : 'U', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                 children: [
-                                     Text(review.username, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                     Row(
-                                       children: [
-                                         Icon(Icons.star, size: 14, color: AppTheme.warningOrange),
-                                         const SizedBox(width: 4),
-                                         Text("${review.rating}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                                         const Spacer(),
-                                         Text(
-                                            "${review.createdAt.day}/${review.createdAt.month}/${review.createdAt.year}", 
-                                            style: TextStyle(color: Colors.grey.shade500, fontSize: 11)
-                                         ),
-                                       ],
-                                     ),
-                                 ],
-                              )
-                            )
-                         ],
-                       ),
-                       const Divider(height: 24),
-                       Expanded(
-                         child: SingleChildScrollView( // Allow scrolling text inside the card if too long
-                           child: Text(
-                             review.comment ?? "", 
-                             style: const TextStyle(color: Colors.black87, height: 1.5, fontSize: 14),
-                           ),
-                         ),
-                       ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
+        if (reviewsToShow.isNotEmpty)
+           _HorizontalReviewList(reviews: reviewsToShow),
       ],
     );
   }
@@ -1422,10 +1361,75 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
 
   Widget _buildProductListSection(String title, List<Product> products, BuildContext context) {
-    if (products.isEmpty) return const SizedBox.shrink();
+    return _HorizontalProductList(title: title, products: products);
+  }
+}
 
-    final ScrollController scrollController = ScrollController();
-    bool isDesktop = MediaQuery.of(context).size.width >= 1200;
+class _HorizontalProductList extends StatefulWidget {
+  final String title;
+  final List<Product> products;
+
+  const _HorizontalProductList({super.key, required this.title, required this.products});
+
+  @override
+  State<_HorizontalProductList> createState() => _HorizontalProductListState();
+}
+
+class _HorizontalProductListState extends State<_HorizontalProductList> {
+  final ScrollController _scrollController = ScrollController();
+  bool _canScrollLeft = false;
+  bool _canScrollRight = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_checkScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkScroll());
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _checkScroll() {
+    if (!_scrollController.hasClients) return;
+    
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.offset;
+    
+    // Use a small epsilon for float comparison
+    bool canLeft = currentScroll > 1.0; 
+    bool canRight = currentScroll < maxScroll - 1.0;
+
+    if (canLeft != _canScrollLeft || canRight != _canScrollRight) {
+      setState(() {
+        _canScrollLeft = canLeft;
+        _canScrollRight = canRight;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.products.isEmpty) return const SizedBox.shrink();
+
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final bool isMobile = screenWidth < 900;
+    
+    // Default width/height for desktop
+    double cardWidth = 180;
+    double sectionHeight = 280;
+    
+    if (isMobile) {
+       // Formula: (Screen - Padding(48) - Gap(16)) / 2
+       final double availableWidth = screenWidth - 48; 
+       cardWidth = (availableWidth - 16) / 2;
+       sectionHeight = 210; 
+    }
+
+    final double scrollDistance = cardWidth + 16; 
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1435,28 +1439,30 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
              children: [
-               Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+               Text(widget.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                Row(
                  children: [
                    IconButton(
                      icon: const Icon(Icons.arrow_back_ios, size: 16),
-                     onPressed: () {
-                       scrollController.animateTo(
-                         scrollController.offset - 300,
+                     color: _canScrollLeft ? Colors.black : Colors.grey.withOpacity(0.3),
+                     onPressed: _canScrollLeft ? () {
+                       _scrollController.animateTo(
+                         (_scrollController.offset - scrollDistance).clamp(0.0, _scrollController.position.maxScrollExtent),
                          duration: const Duration(milliseconds: 300),
                          curve: Curves.easeOut,
                        );
-                     },
+                     } : null,
                    ),
                    IconButton(
                      icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                     onPressed: () {
-                       scrollController.animateTo(
-                         scrollController.offset + 300,
+                     color: _canScrollRight ? Colors.black : Colors.grey.withOpacity(0.3),
+                     onPressed: _canScrollRight ? () {
+                       _scrollController.animateTo(
+                         (_scrollController.offset + scrollDistance).clamp(0.0, _scrollController.position.maxScrollExtent),
                          duration: const Duration(milliseconds: 300),
                          curve: Curves.easeOut,
                        );
-                     },
+                     } : null,
                    ),
                  ],
                ),
@@ -1469,21 +1475,23 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ),
         
         SizedBox(
-          height: 280, 
+          height: sectionHeight, 
           child: ListView.separated(
-            controller: scrollController,
+            controller: _scrollController,
             scrollDirection: Axis.horizontal,
-            itemCount: products.length,
+            padding: EdgeInsets.zero,
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: widget.products.length,
             separatorBuilder: (ctx, i) => const SizedBox(width: 16),
             itemBuilder: (ctx, index) {
               return SizedBox(
-                width: 180,
+                width: cardWidth,
                 child: ProductCard(
-                  product: products[index],
+                  product: widget.products[index],
                   showBadges: true,
                   onTap: () {
                      Navigator.of(context).pushNamed(
-                        '/shop/${products[index].id}',
+                        '/shop/${widget.products[index].id}',
                      );
                   },
                 ),
@@ -1491,6 +1499,185 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             },
           ),
         ),
+      ],
+    );
+  }
+}
+
+class _HorizontalReviewList extends StatefulWidget {
+  final List<Review> reviews;
+
+  const _HorizontalReviewList({super.key, required this.reviews});
+
+  @override
+  State<_HorizontalReviewList> createState() => _HorizontalReviewListState();
+}
+
+class _HorizontalReviewListState extends State<_HorizontalReviewList> {
+  final ScrollController _scrollController = ScrollController();
+  bool _canScrollLeft = false;
+  bool _canScrollRight = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_checkScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkScroll());
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _checkScroll() {
+    if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.offset;
+    bool canLeft = currentScroll > 1.0; 
+    bool canRight = currentScroll < maxScroll - 1.0;
+    if (canLeft != _canScrollLeft || canRight != _canScrollRight) {
+      setState(() {
+        _canScrollLeft = canLeft;
+        _canScrollRight = canRight;
+      });
+    }
+  }
+
+  Color _getAvatarColor(String name) {
+     if (name.isEmpty) return Colors.blue;
+     final colors = [Colors.blue, Colors.green, Colors.purple, Colors.orange, Colors.teal, Colors.indigo];
+     return colors[name.codeUnitAt(0) % colors.length];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Filter to show only reviews with text content
+    final displayReviews = widget.reviews.where((r) => r.comment != null && r.comment!.trim().isNotEmpty).toList();
+
+    if (displayReviews.isEmpty) return const SizedBox.shrink();
+
+    final double cardWidth = 300; 
+    final double scrollDistance = cardWidth + 16; 
+
+    return Column(
+      children: [
+        Row(
+           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+           children: [
+              const Text("Customer Reviews", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              Row(
+                 children: [
+                   IconButton(
+                     icon: const Icon(Icons.arrow_back_ios, size: 16),
+                     color: _canScrollLeft ? Colors.black : Colors.grey.withOpacity(0.3),
+                     onPressed: _canScrollLeft ? () {
+                       _scrollController.animateTo(
+                         (_scrollController.offset - scrollDistance).clamp(0.0, _scrollController.position.maxScrollExtent),
+                         duration: const Duration(milliseconds: 300),
+                         curve: Curves.easeOut,
+                       );
+                     } : null,
+                   ),
+                   IconButton(
+                     icon: const Icon(Icons.arrow_forward_ios, size: 16),
+                     color: _canScrollRight ? Colors.black : Colors.grey.withOpacity(0.3),
+                     onPressed: _canScrollRight ? () {
+                       _scrollController.animateTo(
+                         (_scrollController.offset + scrollDistance).clamp(0.0, _scrollController.position.maxScrollExtent),
+                         duration: const Duration(milliseconds: 300),
+                         curve: Curves.easeOut,
+                       );
+                     } : null,
+                   ),
+                 ],
+               ),
+           ],
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+            height: 220, 
+            child: ListView.separated(
+              controller: _scrollController,
+              scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.zero,
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount: displayReviews.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 16),
+              itemBuilder: (context, index) {
+                final review = displayReviews[index];
+                return Container(
+                  width: cardWidth,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade200),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 4))],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                       Row(
+                         children: [
+                            CircleAvatar(
+                              radius: 16,
+                              backgroundColor: _getAvatarColor(review.username),
+                              child: Text(review.username.isNotEmpty ? review.username[0].toUpperCase() : 'U', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                 children: [
+                                     Text(review.username, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                     const SizedBox(height: 4),
+                                     Row(
+                                       children: [
+                                         Icon(Icons.star, size: 14, color: AppTheme.warningOrange),
+                                         const SizedBox(width: 4),
+                                         Text("${review.rating}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                         const SizedBox(width: 8),
+                                         Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                                            child: const Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.verified, size: 10, color: Colors.green),
+                                                SizedBox(width: 2), 
+                                                Text("Verified Buyer", style: TextStyle(fontSize: 9, color: Colors.green, fontWeight: FontWeight.bold))
+                                              ]
+                                            )
+                                         ),
+                                         const Spacer(),
+                                         Text(
+                                            "${review.createdAt.day}/${review.createdAt.month}/${review.createdAt.year}", 
+                                            style: TextStyle(color: Colors.grey.shade500, fontSize: 10)
+                                         ),
+                                       ],
+                                     ),
+                                 ],
+                              )
+                            )
+                         ],
+                       ),
+                       const Divider(height: 24),
+                       Expanded(
+                         child: SingleChildScrollView( 
+                           child: Text(
+                             review.comment ?? "", 
+                             style: const TextStyle(color: Colors.black87, height: 1.5, fontSize: 14),
+                           ),
+                         ),
+                       ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
       ],
     );
   }

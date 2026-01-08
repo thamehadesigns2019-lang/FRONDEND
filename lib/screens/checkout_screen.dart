@@ -29,6 +29,9 @@ class CheckoutScreen extends StatefulWidget {
 class _CheckoutScreenState extends State<CheckoutScreen> {
   final _formKey = GlobalKey<FormState>();
   final _scrollController = ScrollController();
+  final _addressScrollController = ScrollController();
+  bool _canAddressScrollLeft = false;
+  bool _canAddressScrollRight = true;
   var cfPaymentGatewayService = CFPaymentGatewayService(); 
 
   // Controllers
@@ -39,15 +42,26 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final _addressController = TextEditingController();
   final _cityController = TextEditingController();
   final _stateController = TextEditingController();
+  final _landmarkController = TextEditingController();
   final _countryController = TextEditingController();
 
   // State Variables
-  String _selectedCountry = 'IN'; // Default India code
-  String? _selectedCountryName = 'India'; // Default Name
+  // State Variables
   bool _isLoading = false;
+  bool _isLoadingStates = false;
+  bool _isLoadingCities = false; 
   bool _isDetectingLocation = false;
   double _shippingCost = 0.0;
   List<Map<String, dynamic>> _countries = [];
+  List<dynamic> _states = [];
+  List<dynamic> _cities = [];
+  
+  // Selection
+  String _selectedCountry = '';
+  String _selectedStateCode = '';
+  String _selectedCityCode = '';
+  String _selectedStateName = '';
+  String _selectedCityName = '';
   String _paymentMethod = 'COD';
   bool _saveForNextTime = false;
   Map<String, dynamic>? _selectedRate;
@@ -66,6 +80,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       print("Error setting Cashfree callback: $e");
     }
     _loadInitialData();
+    _addressScrollController.addListener(_checkAddressScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkAddressScroll());
+  }
+
+  void _checkAddressScroll() {
+    if (!_addressScrollController.hasClients) return;
+    final maxScroll = _addressScrollController.position.maxScrollExtent;
+    final currentScroll = _addressScrollController.offset;
+    setState(() {
+      _canAddressScrollLeft = currentScroll > 1.0;
+      _canAddressScrollRight = currentScroll < maxScroll - 1.0;
+    });
   }
 
   void verifyPayment(String orderId) async {
@@ -122,8 +148,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           // Try to find name for default 'IN' if list loaded
           final india = _countries.firstWhere((c) => c['code'] == 'IN', orElse: () => {});
           if (india.isNotEmpty) {
-             _selectedCountryName = india['name'];
+             _selectedCountry = india['code'];
              _countryController.text = india['name']; // Set initial text
+             _fetchStates(_selectedCountry); // Fetch states for default country
           }
         });
       }
@@ -151,10 +178,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _emailController.dispose();
     _pincodeController.dispose();
     _addressController.dispose();
+    _landmarkController.dispose();
     _cityController.dispose();
     _stateController.dispose();
     _countryController.dispose();
     _scrollController.dispose();
+    _addressScrollController.dispose();
     super.dispose();
   }
 
@@ -175,6 +204,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                  _stateController.text = place['State'] ?? '';
                  _cityController.text = place['District'] ?? place['Block'] ?? '';
                });
+               _attemptStateMatch();
                
                _calculateShipping();
             }
@@ -185,6 +215,46 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       } finally {
         setState(() => _isDetectingLocation = false);
       }
+    }
+  }
+
+  Future<void> _fetchStates(String code) async {
+    print("DEBUG: 1) Matched Country: $_selectedCountry");
+    print("DEBUG: 2) Fetching all states for Country Code: $code...");
+    setState(() => _isLoadingStates = true);
+    try {
+      final appState = Provider.of<AppState>(context, listen: false);
+      final states = await appState.apiService.fetchStates(code);
+      print("DEBUG: Received ${states.length} states from server.");
+      print("DEBUG: States Data: $states"); // Console log entire structure
+      
+      if (mounted) setState(() => _states = states);
+      // Auto-match state if user has already typed something (or Pincode filled it)
+      _attemptStateMatch();
+    } catch (e) {
+      print("DEBUG: Error loading states: $e");
+    } finally {
+      if (mounted) setState(() => _isLoadingStates = false);
+    }
+  }
+
+  Future<void> _fetchCities(String countryCode, String stateCode) async {
+    print("DEBUG: 3) Matched State: $_selectedStateName ($stateCode)");
+    print("DEBUG: 4) Fetching all cities for State Code: $stateCode (Country: $countryCode)...");
+    setState(() => _isLoadingCities = true);
+    try {
+       final appState = Provider.of<AppState>(context, listen: false);
+       final cities = await appState.apiService.fetchCities(countryCode, stateCode);
+       print("DEBUG: Received ${cities.length} cities from server.");
+       print("DEBUG: Cities Data: $cities");
+
+       if (mounted) setState(() => _cities = cities);
+       // Auto-match city if user has already typed something
+       _attemptCityAutoMatch();
+    } catch (e) {
+      print("DEBUG: Error loading cities: $e");
+    } finally {
+      if (mounted) setState(() => _isLoadingCities = false);
     }
   }
 
@@ -234,25 +304,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               final cheapestPriceLocal = appState.getPrice(cheapestPriceInr);
 
               // Decide between static rule and dynamic cheapest rate
-              // If static rule is cheaper or free (due to threshold), we can use it.
-              // However, typically Envia is the real real price. 
-              // We pick the absolute minimum available.
-              if (staticShippingLocal < cheapestPriceLocal) {
-                 setState(() {
-                   _shippingCost = staticShippingLocal / appState.getPrice(1.0); // reverse to "base" if getPrice is used in build
-                   // Wait, if _shippingCost is treated as INR in build (getPrice(_shippingCost)), 
-                   // then we should store it as INR.
-                   // But staticShippingLocal is already local.
-                   // Let's store it such that appState.getPrice(_shippingCost) == staticShippingLocal.
-                   _shippingCost = staticShippingLocal == 0 ? 0.0 : staticShippingLocal / (appState.getPrice(100) / 100); 
-                   _selectedRate = null;
-                 });
-              } else {
-                 setState(() {
+              // USER REQUEST: Always prioritize Real Rate if available.
+              // if (staticShippingLocal < cheapestPriceLocal) { ... }
+              
+              print("DEBUG: Using Envia Rate: $cheapestPriceInr vs Static: $staticShippingLocal");
+              setState(() {
                    _shippingCost = cheapestPriceInr;
                    _selectedRate = cheapestRate;
-                 });
-              }
+              });
            } else {
               // Fallback to static rule if no Envia rates
               setState(() {
@@ -282,6 +341,105 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
 
+  // --- Matching Logic Helpers ---
+  
+  void _attemptStateMatch() {
+    final input = _stateController.text.trim().toLowerCase();
+    
+    // Clear if empty
+    if (input.isEmpty) {
+      if (mounted && _selectedStateCode.isNotEmpty) {
+          setState(() { 
+            _selectedStateCode = ''; 
+            _selectedStateName = '';
+            _cities = []; 
+            _selectedCityCode = ''; 
+            _selectedCityName = '';
+          });
+      }
+      return;
+    }
+    
+    if (_states.isEmpty) return;
+
+    // Try finding a match
+    var match = _states.firstWhere((s) => (s['name'] ?? '').toString().toLowerCase() == input, orElse: () => {});
+    if (match.isEmpty && input.length > 2) {
+       match = _states.firstWhere((s) => (s['name'] ?? '').toString().toLowerCase().startsWith(input), orElse: () => {});
+    }
+    
+    if (match.isNotEmpty) {
+      try {
+        final rawCode = match['code'] ?? match['state_code'] ?? match['code_2_digits'] ?? match['short_code'] ?? match['iso_2'];
+        final matchCode = rawCode?.toString() ?? '';
+        final matchName = match['name']?.toString() ?? '';
+        
+        // If it's a new match, update and fetch cities
+        if (_selectedStateCode != matchCode && matchCode.isNotEmpty) {
+          if (mounted) {
+            setState(() {
+              _selectedStateCode = matchCode;
+              _selectedStateName = matchName;
+            });
+          }
+          print("DEBUG: Auto-Matched State: $matchName ($matchCode)");
+          _fetchCities(_selectedCountry, _selectedStateCode);
+        }
+      } catch (e) {
+        print("DEBUG: Error in State Match Logic: $e");
+      }
+    } else {
+       // If currently selected logic doesn't match input anymore, clear it?
+       // For better UX, we only clear if the user is actively typing (onChanged calls this).
+       // But if called from fetchStates, we might want to check validity.
+       if (_selectedStateCode.isNotEmpty) {
+          if (mounted) setState(() => _selectedStateCode = '');
+       }
+    }
+  }
+
+  void _attemptCityAutoMatch() {
+    final input = _cityController.text.trim().toLowerCase();
+    
+    if (input.isEmpty) {
+       if (mounted && _selectedCityCode.isNotEmpty) {
+         setState(() { _selectedCityCode = ''; _selectedCityName = ''; });
+       }
+       return;
+    }
+    
+    if (_cities.isEmpty) return;
+    
+    var match = _cities.firstWhere((c) => (c['name'] ?? '').toString().toLowerCase() == input, orElse: () => {});
+    if (match.isEmpty && input.length > 2) {
+       match = _cities.firstWhere((c) => (c['name'] ?? '').toString().toLowerCase().startsWith(input), orElse: () => {});
+    }
+    
+    if (match.isNotEmpty) {
+        try {
+          final matchCode = match['code']?.toString() ?? '';
+          final matchName = match['name']?.toString() ?? '';
+
+          if (_selectedCityCode != matchCode && matchCode.isNotEmpty) {
+            if (mounted) {
+              setState(() {
+                _selectedCityCode = matchCode;
+                _selectedCityName = matchName;
+              });
+            }
+            print("DEBUG: Auto-Matched City: $matchName ($matchCode)");
+          }
+        } catch (e) {
+          print("DEBUG: Error in City Match Logic: $e");
+        }
+    } else {
+        if (_selectedCityCode.isNotEmpty) {
+          if (mounted) setState(() => _selectedCityCode = '');
+        }
+    }
+  }
+
+
   Future<void> _placeOrder() async {
     if (!_formKey.currentState!.validate()) {
        _showSnack("Please fill all required fields correctly.");
@@ -308,6 +466,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'phone': _phoneController.text,
         'email': _emailController.text,
         'address_line1': _addressController.text,
+        'address_line2': _landmarkController.text, // Sending Landmark as Line 2
         'city': _cityController.text,
         'district': _cityController.text,
         'state': _stateController.text,
@@ -473,10 +632,42 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (_savedAddresses.isNotEmpty) ...[
-                      _buildSectionTitle("Saved Addresses"),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildSectionTitle("Saved Addresses"),
+                          Row(
+                            children: [
+                              if (_canAddressScrollLeft)
+                                IconButton(
+                                  icon: const Icon(Icons.arrow_back_ios, size: 16),
+                                  onPressed: () {
+                                    _addressScrollController.animateTo(
+                                      (_addressScrollController.offset - 200).clamp(0.0, _addressScrollController.position.maxScrollExtent),
+                                      duration: const Duration(milliseconds: 300),
+                                      curve: Curves.easeOut,
+                                    );
+                                  },
+                                ),
+                              if (_canAddressScrollRight)
+                                IconButton(
+                                  icon: const Icon(Icons.arrow_forward_ios, size: 16),
+                                  onPressed: () {
+                                    _addressScrollController.animateTo(
+                                      (_addressScrollController.offset + 200).clamp(0.0, _addressScrollController.position.maxScrollExtent),
+                                      duration: const Duration(milliseconds: 300),
+                                      curve: Curves.easeOut,
+                                    );
+                                  },
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
                       SizedBox(
                         height: 160,
                         child: ListView.separated(
+                          controller: _addressScrollController,
                           scrollDirection: Axis.horizontal,
                           itemCount: _savedAddresses.length + 1,
                           separatorBuilder: (_, __) => const SizedBox(width: 12),
@@ -495,13 +686,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   _buildCardLayout([
                      _buildTextField("Full Name", _nameController, Icons.person, (v) => v!.isEmpty ? "Required" : null),
                      const SizedBox(height: 16),
-                     Row(
-                       children: [
-                         Expanded(child: _buildTextField("Phone Number", _phoneController, Icons.phone, (v) => v!.length < 10 ? "Invalid Phone" : null, inputType: TextInputType.phone)),
-                         const SizedBox(width: 16),
-                         Expanded(child: _buildTextField("Email (Optional)", _emailController, Icons.email, null, inputType: TextInputType.emailAddress)),
-                       ],
-                     ),
+                     _buildTextField("Phone Number", _phoneController, Icons.phone, (v) => v!.length < 10 ? "Invalid Phone" : null, inputType: TextInputType.phone),
+                     const SizedBox(height: 16),
+                     _buildTextField("Email (Optional)", _emailController, Icons.email, null, inputType: TextInputType.emailAddress),
                   ]),
                   
                   const SizedBox(height: 32),
@@ -528,7 +715,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                    icon: const Icon(Icons.close, color: Colors.grey, size: 18),
                                    onPressed: () {
                                      _countryController.clear();
-                                     setState(() => _selectedCountry = '');
+                                      setState(() {
+                                        _selectedCountry = '';
+                                        _states = []; _cities = [];
+                                        _selectedStateCode = ''; _selectedCityCode = '';
+                                        _selectedStateName = ''; _selectedCityName = '';
+                                      });
+                                      print("DEBUG: Country cleared. States/Cities reset.");
                                      _calculateShipping();
                                    },
                                  ),
@@ -546,7 +739,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                            // Smart Match Logic
                            final input = value.trim().toLowerCase();
                            if (input.isEmpty) {
-                             setState(() => _selectedCountry = '');
+                             setState(() {
+                               _selectedCountry = '';
+                               _states = []; _cities = [];
+                               _selectedStateCode = ''; _selectedCityCode = '';
+                               _selectedStateName = ''; _selectedCityName = '';
+                             });
                              return;
                            }
                            
@@ -575,11 +773,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                            }
                            
                            if (match.isNotEmpty) {
-                              setState(() {
-                                 _selectedCountry = match['code'];
-                              });
+                              if (_selectedCountry != match['code']) {
+                                  setState(() {
+                                     _selectedCountry = match['code'];
+                                     _states = []; _cities = []; // Clear old matches
+                                     _selectedStateCode = ''; _selectedCityCode = '';
+                                     _selectedStateName = ''; _selectedCityName = '';
+                                  });
+                                  _fetchStates(_selectedCountry);
+                              }
                            } else {
-                              setState(() => _selectedCountry = '');
+                               if (_selectedCountry.isNotEmpty) {
+                                   setState(() => _selectedCountry = '');
+                               }
                            }
                         },
                       ),
@@ -592,8 +798,143 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             ),
                           ),
                      const SizedBox(height: 16),
+                      
+                     // 2. State Input
+                     _buildTextField("State", _stateController, Icons.map, (v) => v!.isEmpty ? "Required" : null,
+                       isLoading: _isLoadingStates,
+                       onChanged: (value) {
+                          // Smart Match State
+                          final input = value.trim().toLowerCase();
+                          if (input.isEmpty) {
+                            setState(() { 
+                              _selectedStateCode = ''; 
+                              _selectedStateName = '';
+                              _cities = []; 
+                              _selectedCityCode = ''; 
+                            });
+                            return;
+                          }
+                          
+                          var match = _states.firstWhere((s) => (s['name'] ?? '').toString().toLowerCase() == input, orElse: () => {});
+                          if (match.isEmpty && input.length > 2) {
+                             match = _states.firstWhere((s) => (s['name'] ?? '').toString().toLowerCase().startsWith(input), orElse: () => {});
+                          }
+                          
+                           if (match.isNotEmpty) {
+                              try {
+                                print("DEBUG: Potential Match State Object keys: ${match.keys}"); 
+                                // Fix: Added code_2_digits based on console dump
+                                final rawCode = match['code'] ?? match['state_code'] ?? match['code_2_digits'] ?? match['short_code'] ?? match['iso_2'];
+                                final matchCode = rawCode?.toString() ?? '';
+                                final matchName = match['name']?.toString() ?? '';
+                                
+                                if (_selectedStateCode != matchCode && matchCode.isNotEmpty) {
+                                  if (mounted) {
+                                    setState(() {
+                                      _selectedStateCode = matchCode;
+                                      _selectedStateName = matchName;
+                                    });
+                                  }
+                                  print("DEBUG: 3) Matched State Selected: $matchName ($matchCode)");
+                                  _fetchCities(_selectedCountry, _selectedStateCode);
+                                } else if (matchCode.isEmpty) {
+                                   print("DEBUG: CRITICAL FAILURE - Found match '$matchName' but could not extract code from: ${match.keys}");
+                                }
+                              } catch (e) {
+                                print("DEBUG: Error in State Match Logic: $e");
+                              }
+                           } else {
+                              if (mounted) setState(() => _selectedStateCode = '');
+                           }
+                       },
+                       helperText: _isLoadingStates 
+                          ? "Fetching states..." 
+                          : (_states.isEmpty ? (_selectedCountry.isEmpty ? "Select country first" : "No states found") : "Type to match state"),
+                       
+                       suffixIcon: _selectedStateCode.isNotEmpty 
+                          ? Tooltip(message: "Matched: $_selectedStateName", child: const Icon(Icons.check_circle, color: Colors.green, size: 20))
+                          : null,
+                     ),
+                     if (_selectedStateCode.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4, left: 4),
+                            child: Text(
+                              "Matched: $_selectedStateName", 
+                              style: const TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)
+                            ),
+                          ),
+
+                     const SizedBox(height: 16),
                      
-                     // Pincode with Loader
+                     // 3. City Input
+                     _buildTextField("City / District", _cityController, Icons.location_city, (v) => v!.isEmpty ? "Required" : null,
+                        isLoading: _isLoadingCities,
+                        onChanged: (value) {
+                          // Smart Match City
+                          final input = value.trim().toLowerCase();
+                          if (input.isEmpty) {
+                            setState(() { _selectedCityCode = ''; _selectedCityName = ''; });
+                            return;
+                          }
+                          
+                          var match = _cities.firstWhere((c) => (c['name'] ?? '').toString().toLowerCase() == input, orElse: () => {});
+                          if (match.isEmpty && input.length > 2) {
+                             match = _cities.firstWhere((c) => (c['name'] ?? '').toString().toLowerCase().startsWith(input), orElse: () => {});
+                          }
+                          
+                           if (match.isNotEmpty) {
+                               try {
+                                 print("DEBUG: 5) Matched City: ${match['name']}");
+                                 final matchCode = match['code']?.toString() ?? '';
+                                 final matchName = match['name']?.toString() ?? '';
+
+                                 if (_selectedCityCode != matchCode && matchCode.isNotEmpty) {
+                                   if (mounted) {
+                                     setState(() {
+                                       _selectedCityCode = matchCode;
+                                       _selectedCityName = matchName;
+                                     });
+                                   }
+                                 }
+                               } catch (e) {
+                                 print("DEBUG: Error in City Match Logic: $e");
+                               }
+                           } else {
+                               if (_selectedCityCode.isNotEmpty) {
+                                 if (mounted) setState(() => _selectedCityCode = '');
+                               }
+                          }
+                        },
+                        helperText: _isLoadingCities 
+                           ? "Fetching cities..." 
+                           : (_cities.isEmpty ? (_selectedStateCode.isEmpty ? "Select state first" : "Enter city manually") : "Type to match city"),
+                        
+                        suffixIcon: _selectedCityCode.isNotEmpty 
+                           ? Tooltip(message: "Matched: $_selectedCityName", child: const Icon(Icons.check_circle, color: Colors.green, size: 20)) 
+                           : null,
+                     ),
+                     if (_selectedCityCode.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4, left: 4),
+                            child: Text(
+                              "Matched: $_selectedCityName", 
+                              style: const TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)
+                            ),
+                          ),
+                     
+                     const SizedBox(height: 16),
+                     
+                     // 4. Locality / Street Name
+                     _buildTextField("Locality / Street Name", _addressController, Icons.home, (v) => v!.isEmpty ? "Required" : null, maxLines: 2),
+
+                     const SizedBox(height: 16),
+                     
+                     // 5. Landmark
+                     _buildTextField("Landmark (Optional)", _landmarkController, Icons.flag, null),
+
+                     const SizedBox(height: 32),
+                     
+                     // 6. Pincode with Loader (Moved to bottom)
                      Stack(
                        children: [
                          _buildTextField("Pincode / Zip Code", _pincodeController, Icons.pin_drop, (v) => v!.length < 4 ? "Invalid Pincode" : null, 
@@ -607,20 +948,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                      if (_selectedCountry == 'IN')
                        const Padding(
                          padding: EdgeInsets.only(left: 4.0, top: 4.0),
-                         child: Text("Enter Pincode to auto-detect State & City", style: TextStyle(fontSize: 12, color: AppTheme.primaryPurple)),
+                         child: Text("Auto-detect enabled for India", style: TextStyle(fontSize: 12, color: AppTheme.primaryPurple)),
                        ),
-                     const SizedBox(height: 16),
-                     
-                     Row(
-                       children: [
-                         Expanded(child: _buildTextField("State", _stateController, Icons.map, (v) => v!.isEmpty ? "Required" : null)),
-                         const SizedBox(width: 16),
-                         Expanded(child: _buildTextField("City / District", _cityController, Icons.location_city, (v) => v!.isEmpty ? "Required" : null)),
-                       ],
-                     ),
-                     const SizedBox(height: 16),
-                     
-                     _buildTextField("Address (House No, Building, Street)", _addressController, Icons.home, (v) => v!.isEmpty ? "Required" : null, maxLines: 2),
                       
                       const SizedBox(height: 12),
                       CheckboxListTile(
@@ -809,6 +1138,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
          if (cObj.isNotEmpty) {
            _selectedCountry = cObj['code'];
            _countryController.text = cObj['name'];
+           _fetchStates(_selectedCountry); // Fetch states for the selected country
          } else {
            _countryController.text = c;
          }
@@ -830,6 +1160,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
        _cityController.clear();
        _stateController.clear();
        _pincodeController.clear();
+       _countryController.clear();
+       _selectedCountry = '';
+       _selectedStateCode = '';
+       _selectedCityCode = '';
+       _states = [];
+       _cities = [];
     });
   }
 
@@ -853,23 +1189,29 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
   
-  Widget _buildTextField(String label, TextEditingController controller, IconData icon, String? Function(String?)? validator, {TextInputType inputType = TextInputType.text, int maxLines = 1, Function(String)? onChanged}) {
+  Widget _buildTextField(String label, TextEditingController controller, IconData icon, String? Function(String?)? validator, {TextInputType inputType = TextInputType.text, int maxLines = 1, Function(String)? onChanged, String? helperText, Widget? suffixIcon, bool isLoading = false}) {
     return TextFormField(
       controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: Colors.grey, size: 20),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppTheme.primaryPurple, width: 2)),
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-      ),
       keyboardType: inputType,
       maxLines: maxLines,
-      validator: validator,
       onChanged: onChanged,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+        helperText: helperText,
+        helperStyle: TextStyle(color: AppTheme.primaryPurple.withOpacity(0.8), fontSize: 11),
+        suffixIcon: isLoading 
+            ? const Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))) 
+            : suffixIcon,
+        prefixIcon: Icon(icon, color: Colors.grey.shade400, size: 20),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppTheme.primaryPurple, width: 1.5)),
+        filled: true,
+        fillColor: Colors.grey.shade50.withOpacity(0.5),
+        contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+      ),
+      validator: validator,
     );
   }
 

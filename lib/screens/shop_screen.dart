@@ -119,179 +119,177 @@ class _ShopScreenState extends State<ShopScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50], 
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          if (constraints.maxWidth > 900) {
-            return _buildDesktopLayout(context);
-          }
-          return _buildMobileLayout(context);
-        },
-      ),
+      body: _buildLayout(context),
     );
   }
 
-  Widget _buildDesktopLayout(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Sidebar
-        Container(
-          width: 300,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border(right: BorderSide(color: Colors.grey.shade200)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Text('Filters', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: _buildSearchBar(),
-              ),
-              const SizedBox(height: 24),
-              const Padding(
-                 padding: EdgeInsets.symmetric(horizontal: 24.0),
-                 child: Text('Categories', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: Consumer<AppState>(
-                  builder: (context, appState, _) {
-                    final roots = _buildCategoryTree(appState.categories);
-                    return ListView(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      children: [
-                        _buildCategoryTile( title: 'All', isSelected: _selectedCategoryName == 'All', onTap: () => setState(() => _selectedCategoryName = 'All')),
-                        ...roots.map((node) => _buildCategoryNode(node)).toList(),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-        
-        // Grid
-        Expanded(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(32.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                     Text(
-                       _selectedCategoryName, 
-                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: AppTheme.primaryPurple)
-                     ),
-                     SizedBox(width: 200, child: _buildSortDropdown(isExpanded: true)),
-                  ],
-                ),
-              ),
-              Expanded(child: _buildProductGrid()),
-            ],
-          ),
-        )
-      ],
-    );
-  }
-
-  Widget _buildMobileLayout(BuildContext context) {
+  Widget _buildLayout(BuildContext context) {
+    final bool isDesktop = MediaQuery.of(context).size.width > 800;
+    
     return Column(
       children: [
         Container(
           padding: const EdgeInsets.all(16),
           color: Colors.white,
-          child: Column(
-            children: [
-               _buildSearchBar(),
-               const SizedBox(height: 12),
-                Row(
-                  children: [
-                    // Category Filter Icon Button
-                    Flexible(
-                      flex: 2,
-                      child: Consumer<AppState>(
-                        builder: (context, appState, _) {
-                          final roots = _buildCategoryTree(appState.categories);
-                          
-                          return PopupMenuButton<String>(
-                            tooltip: 'Filter by Category',
+          width: double.infinity,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: isDesktop ? 600 : double.infinity), 
+              child: Column(
+                children: [
+                   _buildSearchBar(),
+                   const SizedBox(height: 16),
+                   
+                   // Enhanced Mobile Filter Bar
+                   Row(
+                     children: [
+                       // Category Filter - Expanded
+                       Expanded(
+                         child: Consumer<AppState>(
+                           builder: (context, appState, _) {
+                             final roots = _buildCategoryTree(appState.categories);
+                             return PopupMenuButton<String>(
+                               offset: const Offset(0, 50),
+                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                               elevation: 4,
+                               child: Container(
+                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                 decoration: BoxDecoration(
+                                   color: Colors.white,
+                                   border: Border.all(color: Colors.black, width: 1.2),
+                                   borderRadius: BorderRadius.circular(16),
+                                   boxShadow: [
+                                      BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
+                                   ]
+                                 ),
+                                 child: Row(
+                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                   children: [
+                                     Expanded(
+                                       child: Row(
+                                         children: [
+                                           Icon(Icons.grid_view_rounded, color: Colors.grey[700], size: 20),
+                                           const SizedBox(width: 8),
+                                           Expanded(
+                                             child: Text(
+                                               _selectedCategoryName == 'All' ? 'Category' : _selectedCategoryName, 
+                                               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                               maxLines: 1,
+                                               overflow: TextOverflow.ellipsis,
+                                             ),
+                                           ),
+                                         ],
+                                       ),
+                                     ),
+                                     const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey),
+                                   ],
+                                 ),
+                               ),
+                               onSelected: (v) => setState(() => _selectedCategoryName = v),
+                               itemBuilder: (context) {
+                                 List<PopupMenuEntry<String>> items = [
+                                   const PopupMenuItem(value: 'All', textStyle: TextStyle(fontWeight: FontWeight.bold, color: Colors.black), child: Text('All Products')),
+                                   const PopupMenuDivider(),
+                                 ];
+                                 
+                                 for (var root in roots) {
+                                   items.add(PopupMenuItem(
+                                     value: root['name'],
+                                     child: Text(root['name'], style: const TextStyle(fontWeight: FontWeight.w600)),
+                                   ));
+                                   if (root['children'] != null) {
+                                     for (var child in root['children']) {
+                                       items.add(PopupMenuItem(
+                                         value: child['name'],
+                                         height: 32, // More compact children
+                                         child: Row(
+                                           children: [
+                                             const SizedBox(width: 12),
+                                             Icon(Icons.subdirectory_arrow_right, size: 16, color: Colors.grey[400]),
+                                             const SizedBox(width: 8),
+                                             Text(child['name'], style: TextStyle(color: Colors.grey[800], fontSize: 13)),
+                                           ],
+                                         ),
+                                       ));
+                                     }
+                                   }
+                                 }
+                                 return items;
+                               },
+                             );
+                           }
+                         ),
+                       ),
+                       
+                       const SizedBox(width: 12),
+                       
+                       // Sort Dropdown
+                       Expanded(
+                         child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () {
+                               // Show sort modal
+                                showModalBottomSheet(
+                                  context: context,
+                                  shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                                  builder: (context) => Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                       const SizedBox(height: 12),
+                                       Container(height: 4, width: 40, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+                                       const Padding(
+                                         padding: EdgeInsets.all(16.0),
+                                         child: Text("Sort By", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                                       ),
+                                       ...[
+                                          {'id': 'name', 'label': 'Name'},
+                                          {'id': 'price_low', 'label': 'Price: Low to High'},
+                                          {'id': 'price_high', 'label': 'Price: High to Low'},
+                                          {'id': 'newest', 'label': 'Newest'},
+                                       ].map((s) => ListTile(
+                                          title: Text(s['label']!),
+                                          trailing: _sortBy == s['id'] ? const Icon(Icons.check, color: AppTheme.primaryPurple) : null,
+                                          onTap: () {
+                                             setState(() => _sortBy = s['id']!);
+                                             Navigator.pop(context);
+                                          },
+                                       )),
+                                       const SizedBox(height: 24),
+                                    ],
+                                  )
+                                );
+                            },
                             child: Container(
-                              height: 40,
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                               decoration: BoxDecoration(
-                                color: Colors.white,
-                                border: Border.all(color: Colors.grey.shade300),
-                                borderRadius: BorderRadius.circular(8),
+                                     color: Colors.white,
+                                     border: Border.all(color: Colors.black, width: 1.2),
+                                     borderRadius: BorderRadius.circular(16),
+                                     boxShadow: [
+                                        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
+                                     ]
                               ),
                               child: Row(
-                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Icon(Icons.filter_alt, color: AppTheme.primaryPurple, size: 20),
-                                  const SizedBox(width: 8),
-                                  Flexible(
-                                    child: Text(
-                                      _selectedCategoryName,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.sort_rounded, color: Colors.grey[700], size: 20),
+                                      const SizedBox(width: 8),
+                                      const Text("Sort By", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                                    ],
                                   ),
-                                  const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                                  const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey),
                                 ],
                               ),
                             ),
-                            onSelected: (v) => setState(() => _selectedCategoryName = v),
-                            itemBuilder: (context) {
-                              List<PopupMenuEntry<String>> items = [
-                                const PopupMenuItem(value: 'All', child: Text('All Products')),
-                              ];
-                              
-                              for (var root in roots) {
-                                items.add(PopupMenuItem(
-                                  value: root['name'],
-                                  child: Text(root['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                                ));
-                                if (root['children'] != null) {
-                                  for (var child in root['children']) {
-                                    items.add(PopupMenuItem(
-                                      value: child['name'],
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(left: 16.0),
-                                        child: Text(child['name']),
-                                      ),
-                                    ));
-                                  }
-                                }
-                              }
-                              return items;
-                            },
-                          );
-                        }
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Sort Dropdown (More compact)
-                    Flexible(
-                      flex: 1,
-                      child: Container(
-                        height: 40,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100], 
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: _buildSortDropdown(isExpanded: true),
-                      ),
-                    ),
-                  ],
-                ),
-            ],
+                         ),
+                       ),
+                     ],
+                   ),
+                ],
+              ),
+            ),
           ),
         ),
         Expanded(child: _buildProductGrid()),
@@ -364,38 +362,73 @@ class _ShopScreenState extends State<ShopScreen> {
   }
 
   Widget _buildSearchBar() {
-    return TextField(
-      onChanged: (v) => setState(() => _searchQuery = v.toLowerCase()),
-      decoration: InputDecoration(
-        hintText: 'Search products...',
-        prefixIcon: const Icon(Icons.search),
-        filled: true,
-        fillColor: Colors.grey[100],
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        contentPadding: const EdgeInsets.all(16),
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(50),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: TextField(
+        onChanged: (v) => setState(() => _searchQuery = v.toLowerCase()),
+        style: const TextStyle(fontWeight: FontWeight.w500),
+        decoration: InputDecoration(
+          hintText: 'Search products...',
+          hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
+          prefixIcon: const Padding(
+            padding: EdgeInsets.only(left: 20, right: 12),
+            child: Icon(Icons.search, color: Colors.black87),
+          ),
+          prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+          filled: true,
+          fillColor: Colors.white,
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(50),
+            borderSide: const BorderSide(color: Colors.black, width: 1.2),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(50),
+            borderSide: const BorderSide(color: Colors.black, width: 1.2),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(50),
+            borderSide: const BorderSide(color: Colors.black, width: 2.0),
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildSortDropdown({bool isExpanded = false}) {
-     return Container(
-       padding: const EdgeInsets.symmetric(horizontal: 12),
-       decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
-       child: DropdownButtonHideUnderline(
-         child: DropdownButton<String>(
-           value: _sortBy,
-           isExpanded: isExpanded,
-           icon: const Icon(Icons.sort),
-           items: const [
-             DropdownMenuItem(value: 'name', child: Text('Name')),
-             DropdownMenuItem(value: 'price_low', child: Text('Price: Low to High')),
-             DropdownMenuItem(value: 'price_high', child: Text('Price: High to Low')),
-             DropdownMenuItem(value: 'newest', child: Text('Newest')),
-           ],
-           onChanged: (v) => setState(() => _sortBy = v!),
+       return Container(
+         padding: const EdgeInsets.symmetric(horizontal: 16),
+         decoration: BoxDecoration(
+           color: Colors.white, 
+           borderRadius: BorderRadius.circular(12),
+           border: Border.all(color: Colors.grey.shade300),
          ),
-       ),
-     );
+         child: DropdownButtonHideUnderline(
+           child: DropdownButton<String>(
+             value: _sortBy,
+             isExpanded: isExpanded,
+             icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey),
+             style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500, fontSize: 14),
+             items: const [
+               DropdownMenuItem(value: 'name', child: Text('Name')),
+               DropdownMenuItem(value: 'price_low', child: Text('Price: Low to High')),
+               DropdownMenuItem(value: 'price_high', child: Text('Price: High to Low')),
+               DropdownMenuItem(value: 'newest', child: Text('Newest')),
+             ],
+             onChanged: (v) => setState(() => _sortBy = v!),
+           ),
+         ),
+       );
   }
 
   Widget _buildProductGrid() {
@@ -420,8 +453,10 @@ class _ShopScreenState extends State<ShopScreen> {
            builder: (context, constraints) {
               int crossAxisCount = 2;
               double padding = 16;
-              if (constraints.maxWidth > 1200) { crossAxisCount = 4; padding = 32; }
-              else if (constraints.maxWidth > 800) { crossAxisCount = 3; padding = 24; }
+              if (constraints.maxWidth > 1600) { crossAxisCount = 6; padding = 32; }
+              else if (constraints.maxWidth > 1300) { crossAxisCount = 5; padding = 32; }
+              else if (constraints.maxWidth > 1000) { crossAxisCount = 4; padding = 24; }
+              else if (constraints.maxWidth > 600) { crossAxisCount = 3; padding = 24; }
               
               return GridView.builder(
                 padding: EdgeInsets.all(padding),

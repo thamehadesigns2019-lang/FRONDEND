@@ -42,115 +42,158 @@ class FooterSection extends StatelessWidget {
         }
         
         return Container(
-          padding: const EdgeInsets.only(top: 60, bottom: 24, left: 24, right: 24),
           color: const Color(0xFF1A1A2E),
-          child: Column(
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                gradient: AppTheme.primaryGradient,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(Icons.shopping_bag, color: Colors.white, size: 20),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              companyName,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          description,
-                          style: TextStyle(
-                            color: Colors.grey[400],
-                            height: 1.5,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isMobile = constraints.maxWidth < 600;
+              final double horizontalPadding = isMobile ? 16 : 24;
+              final double topPadding = isMobile ? 32 : 60;
+              final double titleSize = isMobile ? 20 : 24;
+              final double descSize = isMobile ? 13 : 14; // Smaller text for mobile
+              
+              return Padding(
+                padding: EdgeInsets.only(top: topPadding, bottom: 24, left: horizontalPadding, right: horizontalPadding),
+                child: Column(
+                  children: [
+                    // Main Content
+                    isMobile 
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildCompanyInfo(companyName, description, titleSize, descSize),
+                          const SizedBox(height: 32),
+                          _buildLinksSection(context, customLinks),
+                        ],
+                      )
+                    : Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: _buildCompanyInfo(companyName, description, titleSize, descSize),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 40),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Links',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                          const SizedBox(width: 40),
+                          Expanded(
+                            child: _buildLinksSection(context, customLinks),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        _FooterLink('Home', onTap: () => Provider.of<AppState>(context, listen: false).setSelectedTab(0)),
-                        _FooterLink('Shop', onTap: () => Provider.of<AppState>(context, listen: false).setSelectedTab(1)),
-                        _FooterLink('About Us'), // Hardcoded basic links
-                        _FooterLink('Contact'),
-                        
-                        // Dynamic Links
-                        ...customLinks.map((l) => _FooterLink(l['label']!, onTap: () {
-                           // Launch URL if needed, for now just a spacer
-                        })).toList(),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 48),
-              Divider(color: Colors.white.withOpacity(0.1)),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '© ${DateTime.now().year} $companyName. All rights reserved.',
-                    style: TextStyle(
-                      color: Colors.grey[500],
-                      fontSize: 12,
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      if (socials.containsKey('facebook')) _SocialIcon(Icons.facebook),
-                      if (socials.containsKey('facebook')) const SizedBox(width: 12),
-                      
-                      if (socials.containsKey('instagram')) _SocialIcon(Icons.camera_alt),
-                      if (socials.containsKey('instagram')) const SizedBox(width: 12),
-                      
-                      if (socials.containsKey('twitter')) _SocialIcon(Icons.alternate_email),
-                      if (socials.containsKey('twitter')) const SizedBox(width: 12),
-                      
-                      if (socials.containsKey('linkedin')) _SocialIcon(Icons.business),
-                      if (socials.containsKey('linkedin')) const SizedBox(width: 12),
-
-                      if (socials.containsKey('youtube')) _SocialIcon(Icons.video_library),
-                    ],
-                  ),
-                ],
-              ),
-            ],
+                        ],
+                      ),
+                    
+                    const SizedBox(height: 32),
+                    Divider(color: Colors.white.withOpacity(0.1)),
+                    const SizedBox(height: 24),
+                    
+                    // Bottom Bar
+                    isMobile
+                    ? Column(
+                        children: [
+                          _buildSocials(socials),
+                          const SizedBox(height: 16),
+                          Text(
+                            '© ${DateTime.now().year} $companyName. All rights reserved.',
+                            style: TextStyle(color: Colors.grey[500], fontSize: 10), // Smaller copyright
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '© ${DateTime.now().year} $companyName. All rights reserved.',
+                            style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                          ),
+                          _buildSocials(socials),
+                        ],
+                      ),
+                  ],
+                ),
+              );
+            }
           ),
         );
       }
     );
+  }
+
+  Widget _buildCompanyInfo(String name, String desc, double titleSize, double descSize) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                gradient: AppTheme.primaryGradient,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.shopping_bag, color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Text(
+                name,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: titleSize,
+                  fontWeight: FontWeight.bold,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Text(
+          desc,
+          style: TextStyle(
+            color: Colors.grey[400],
+            fontSize: descSize,
+            height: 1.5,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLinksSection(BuildContext context, List<Map<String, String>> customLinks) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Links',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 16),
+        _FooterLink('Home', onTap: () => Provider.of<AppState>(context, listen: false).setSelectedTab(0)),
+        _FooterLink('Shop', onTap: () => Provider.of<AppState>(context, listen: false).setSelectedTab(1)),
+        _FooterLink('About Us'), // Placeholder
+        _FooterLink('Contact'),
+        
+        ...customLinks.map((l) => _FooterLink(l['label']!, onTap: () {})).toList(),
+      ],
+    );
+  }
+
+  Widget _buildSocials(Map<String, String> socials) {
+     return Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        alignment: WrapAlignment.center,
+        children: [
+          if (socials.containsKey('facebook')) _SocialIcon(Icons.facebook),
+          if (socials.containsKey('instagram')) _SocialIcon(Icons.camera_alt),
+          if (socials.containsKey('twitter')) _SocialIcon(Icons.alternate_email),
+          if (socials.containsKey('linkedin')) _SocialIcon(Icons.business),
+          if (socials.containsKey('youtube')) _SocialIcon(Icons.video_library),
+        ],
+     );
   }
 }
 

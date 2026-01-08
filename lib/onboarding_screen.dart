@@ -79,7 +79,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
 
   _completeOnboarding() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('seenOnboarding', true); // Match key used in splash screen
+    await prefs.setBool('isFirstTime', false);
     
     if (mounted) {
       Navigator.of(context).pushReplacementNamed('/home');
@@ -255,62 +255,76 @@ class OnboardingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Icon card with gradient
-          Container(
-            width: 200,
-            height: 200,
-            decoration: BoxDecoration(
-              gradient: gradient,
-              borderRadius: BorderRadius.circular(32),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
-                  blurRadius: 30,
-                  spreadRadius: 5,
-                  offset: const Offset(0, 10),
+    // Responsive sizing logic
+    final size = MediaQuery.of(context).size;
+    final isCompact = size.height < 700; // Adjust breakpoint as needed
+
+    final double containerSize = isCompact ? 140 : 200;
+    final double iconSize = isCompact ? 70 : 100;
+    final double titleSize = isCompact ? 22 : 28;
+    final double descSize = isCompact ? 14 : 16;
+    final double gap = isCompact ? 24 : 48;
+
+    return Center(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Icon card with gradient
+              Container(
+                width: containerSize,
+                height: containerSize,
+                decoration: BoxDecoration(
+                  gradient: gradient,
+                  borderRadius: BorderRadius.circular(isCompact ? 24 : 32),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: isCompact ? 20 : 30,
+                      spreadRadius: isCompact ? 3 : 5,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Center(
-              child: Icon(
-                icon,
-                size: 100,
-                color: Colors.white,
+                child: Center(
+                  child: Icon(
+                    icon,
+                    size: iconSize,
+                    color: Colors.white,
+                  ),
+                ),
               ),
-            ),
+              SizedBox(height: gap),
+
+              // Title
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: titleSize,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1A1A2E),
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Description
+              Text(
+                description,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: descSize,
+                  color: Colors.grey.shade700,
+                  height: 1.6,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 48),
-          
-          // Title
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A2E),
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: 20),
-          
-          // Description
-          Text(
-            description,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey.shade700,
-              height: 1.6,
-              letterSpacing: 0.3,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

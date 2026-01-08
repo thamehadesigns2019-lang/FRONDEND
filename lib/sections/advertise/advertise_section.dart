@@ -18,6 +18,7 @@ class AdvertiseSection extends StatelessWidget {
 
         final screenWidth = MediaQuery.of(context).size.width;
         final isMobile = screenWidth < 600;
+        final isSmallMobile = screenWidth < 400; // Check for small screens
 
         // Dynamic Sizing
         double cardWidth;
@@ -43,13 +44,13 @@ class AdvertiseSection extends StatelessWidget {
                 padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 24),
                 child: Row(
                   children: [
-                    Icon(Icons.stars_rounded, color: Colors.indigo, size: isMobile ? 28 : 32),
+                    Icon(Icons.stars_rounded, color: Colors.indigo, size: isSmallMobile ? 24 : (isMobile ? 28 : 32)),
                     const SizedBox(width: 12),
                     Text(
                       'Featured Products', // "Advertise" sounds internal. "Featured" is better for users.
                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.bold,
-                            fontSize: isMobile ? 24 : 32,
+                            fontSize: isSmallMobile ? 22 : (isMobile ? 24 : 32),
                           ),
                     ),
                   ],

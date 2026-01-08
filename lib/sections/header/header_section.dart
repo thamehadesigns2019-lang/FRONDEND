@@ -51,8 +51,13 @@ class HeaderSection extends StatelessWidget {
           if (isDesktopMode) ...[
              const SizedBox(width: 48),
              // Search Bar
-             const Expanded(
-               child: ProductSearchBar(),
+             Expanded(
+               child: Center(
+                 child: ConstrainedBox(
+                   constraints: const BoxConstraints(maxWidth: 600),
+                   child: const ProductSearchBar(),
+                 ),
+               ),
              ),
              const SizedBox(width: 48),
           ],
@@ -158,7 +163,14 @@ class HeaderSection extends StatelessWidget {
 
                ] else ...[
                   const SizedBox(width: 16),
-                  OutlinedButton.icon(
+                  if (ResponsiveLayout.isMobile(context))
+                    IconButton(
+                      onPressed: () => Navigator.pushNamed(context, '/login'),
+                      icon: const Icon(Icons.login),
+                      tooltip: "Login",
+                    )
+                  else
+                    OutlinedButton.icon(
                       onPressed: () => Navigator.pushNamed(context, '/login'),
                       icon: const Icon(Icons.login),
                       label: const Text("LOGIN"),

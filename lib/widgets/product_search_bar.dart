@@ -77,6 +77,7 @@ class _ProductSearchBarState extends State<ProductSearchBar> {
   }
 
   void _showOverlay() {
+    final appState = Provider.of<AppState>(context, listen: false);
     if (_overlayEntry != null) {
       _overlayEntry!.markNeedsBuild();
       return;
@@ -117,7 +118,7 @@ class _ProductSearchBarState extends State<ProductSearchBar> {
                         child: product.image == null ? const Icon(Icons.image, size: 20, color: Colors.grey) : null,
                     ),
                     title: Text(product.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    subtitle: Text("${product.category} • \$${product.price}", style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    subtitle: Text("${product.category} • ${appState.currencySymbol}${appState.getPrice(product.price)}", style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                     onTap: () {
                       _removeOverlay();
                       _searchController.clear();
@@ -148,15 +149,18 @@ class _ProductSearchBarState extends State<ProductSearchBar> {
       child: Container(
         height: 50,
         decoration: BoxDecoration(
-          color: const Color(0xFFFAFAFA),
-          border: Border.all(color: const Color(0xFFE0E0E0)),
-          borderRadius: BorderRadius.zero, // Classic sharp edges
+          color: Colors.white,
+          border: Border.all(color: Colors.black, width: 1.2),
+          borderRadius: BorderRadius.circular(50),
+          boxShadow: [
+             BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
+          ]
         ),
         child: Row(
           children: [
             const Padding(
-              padding: EdgeInsets.only(left: 16, right: 12),
-              child: Icon(Icons.search, color: Colors.grey),
+              padding: EdgeInsets.only(left: 20, right: 12),
+              child: Icon(Icons.search, color: Colors.black87),
             ),
             Expanded(
               child: TextField(
@@ -164,7 +168,7 @@ class _ProductSearchBarState extends State<ProductSearchBar> {
                 focusNode: _searchFocusNode,
                 decoration: const InputDecoration(
                   hintText: "Search products...",
-                  hintStyle: TextStyle(color: Colors.grey),
+                  hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
@@ -179,6 +183,8 @@ class _ProductSearchBarState extends State<ProductSearchBar> {
                       Navigator.pushNamed(context, '/shop/${_filteredProducts[0].id}');
                       _removeOverlay();
                       _searchController.clear();
+                    } else if (val.isNotEmpty) {
+                       Provider.of<AppState>(context, listen: false).setSelectedTab(1);
                     }
                 },
               ),
@@ -192,6 +198,8 @@ class _ProductSearchBarState extends State<ProductSearchBar> {
                   _removeOverlay();
                 }
               )
+            else
+               const SizedBox(width: 8)
           ],
         ),
       ),

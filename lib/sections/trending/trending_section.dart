@@ -15,6 +15,9 @@ class TrendingSection extends StatefulWidget {
 
 class _TrendingSectionState extends State<TrendingSection> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  final ScrollController _scrollController = ScrollController();
+  bool _canScrollLeft = false;
+  bool _canScrollRight = true;
   
   @override
   void initState() {
@@ -24,18 +27,49 @@ class _TrendingSectionState extends State<TrendingSection> with SingleTickerProv
         vsync: this
     );
     _controller.forward();
+    _scrollController.addListener(_checkScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkScroll());
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _checkScroll() {
+    if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.offset;
+    setState(() {
+      _canScrollLeft = currentScroll > 1.0;
+      _canScrollRight = currentScroll < maxScroll - 1.0;
+    });
+  }
+
+  void _scrollLeft() {
+    _scrollController.animateTo(
+      (_scrollController.offset - 200).clamp(0.0, _scrollController.position.maxScrollExtent),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
+  }
+
+  void _scrollRight() {
+    _scrollController.animateTo(
+      (_scrollController.offset + 200).clamp(0.0, _scrollController.position.maxScrollExtent),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    // Trending Section
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
+    final isSmallMobile = screenWidth < 400; // Check for small screens
     
     // Calculate card width based on screen size
     double cardWidth;
@@ -43,10 +77,15 @@ class _TrendingSectionState extends State<TrendingSection> with SingleTickerProv
     double horizontalPadding;
     
     if (isMobile) {
-      // Mobile: smaller cards that fit perfectly on all devices
-      cardWidth = screenWidth * 0.45; // Reduced from 60% to 45%
-      cardHeight = cardWidth * 1.3; // Better aspect ratio (reduced from 1.5)
+      // Mobile: smaller cards that fit perfectly on all devices (2 cards per row)
+      // Total margins: Outer(12) + Gap(12) + Outer(12) = 36 approx usage space if we count carefully
+      // Formula: (Width - TotalPaddingAndMargins) / 2
       horizontalPadding = 12;
+      // List Padding (6 + 6) + Card Margins (6 + 6 per card means 12 gap between centers?)
+      // Layout: [Pad 6] [Card 6..6] [Card 6..6] [Pad 6]
+      // 6 + 6+Content+6 + 6+Content+6 + 6 = 36 + 2*Content = Width
+      cardWidth = (screenWidth - 36) / 2;
+      cardHeight = cardWidth * 1.35; 
     } else if (screenWidth < 900) {
       // Tablet
       cardWidth = 200;
@@ -85,7 +124,7 @@ class _TrendingSectionState extends State<TrendingSection> with SingleTickerProv
                             child: Icon(
                               Icons.trending_up_rounded,
                               color: Colors.black,
-                              size: isMobile ? 28 : 32,
+                              size: isSmallMobile ? 24 : (isMobile ? 28 : 32),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -101,7 +140,7 @@ class _TrendingSectionState extends State<TrendingSection> with SingleTickerProv
                                 'Trending Now',
                                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                       fontWeight: FontWeight.bold,
-                                      fontSize: isMobile ? 28 : 32,
+                                      fontSize: isSmallMobile ? 14 : (isMobile ? 16 : 32),
                                       letterSpacing: 1.0,
                                     ),
                               ),
@@ -115,7 +154,7 @@ class _TrendingSectionState extends State<TrendingSection> with SingleTickerProv
                           CurvedAnimation(parent: _controller, curve: const Interval(0.3, 0.8, curve: Curves.elasticOut)),
                         ),
                         child: Container(
-                          width: 80,
+                          width: isSmallMobile ? 60 : 80,
                           height: 4,
                           decoration: const BoxDecoration(
                             color: Colors.black,
@@ -126,32 +165,56 @@ class _TrendingSectionState extends State<TrendingSection> with SingleTickerProv
                     ],
                   ),
                 ),
-                FadeTransition(
-                  opacity: Tween<double>(begin: 0, end: 1).animate(
-                    CurvedAnimation(parent: _controller, curve: const Interval(0.5, 1.0, curve: Curves.easeIn)),
-                  ),
-                  child: TextButton(
-                    onPressed: () {
-                      Provider.of<AppState>(context, listen: false).setSelectedTab(1);
-                    },
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.black,
+                
+                Row(
+                  children: [
+                    if (isMobile) ...[
+                      IconButton(
+                        onPressed: _canScrollLeft ? _scrollLeft : null,
+                        icon: Icon(Icons.arrow_back_ios, size: 16, color: _canScrollLeft ? Colors.black : Colors.grey.withOpacity(0.3)),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                      const SizedBox(width: 16),
+                      IconButton(
+                        onPressed: _canScrollRight ? _scrollRight : null,
+                        icon: Icon(Icons.arrow_forward_ios, size: 16, color: _canScrollRight ? Colors.black : Colors.grey.withOpacity(0.3)),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                      const SizedBox(width: 16),
+                    ],
+                    FadeTransition(
+                    opacity: Tween<double>(begin: 0, end: 1).animate(
+                      CurvedAnimation(parent: _controller, curve: const Interval(0.5, 1.0, curve: Curves.easeIn)),
                     ),
-                    child: Row(
-                      children: [
-                        Text(
-                          'View All',
-                          style: TextStyle(
-                            fontSize: isMobile ? 14 : 16,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1.0,
+                    child: TextButton(
+                      onPressed: () {
+                        Provider.of<AppState>(context, listen: false).setSelectedTab(1);
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.black,
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(0, 0),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Row(
+                        children: [
+                          Text(
+                            'View All',
+                            style: TextStyle(
+                              fontSize: isSmallMobile ? 12 : (isMobile ? 14 : 16),
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1.0,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.arrow_forward, size: 16),
-                      ],
+                          const SizedBox(width: 8),
+                           Icon(Icons.arrow_forward, size: isSmallMobile ? 14 : 16),
+                        ],
+                      ),
                     ),
                   ),
+                  ]
                 ),
               ],
             ),
@@ -221,6 +284,7 @@ class _TrendingSectionState extends State<TrendingSection> with SingleTickerProv
                 }
 
                 return ListView.builder(
+                  controller: _scrollController,
                   physics: const BouncingScrollPhysics(),
                   padding: EdgeInsets.symmetric(horizontal: horizontalPadding / 2),
                   scrollDirection: Axis.horizontal,
