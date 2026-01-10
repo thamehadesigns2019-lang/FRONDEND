@@ -98,20 +98,20 @@ class CartScreen extends StatelessWidget {
           if (appState.recentlyViewed.isNotEmpty)
              Padding(
                padding: const EdgeInsets.only(left: 24.0, bottom: 40),
-               child: _buildProductListSection("Recently Viewed", appState.recentlyViewed.take(10).toList(), context),
+               child: _ProductSlider(title: "Recently Viewed", products: appState.recentlyViewed.take(10).toList()),
              ),
 
           if (appState.wishlistProducts.isNotEmpty)
              Padding(
                padding: const EdgeInsets.only(left: 24.0, bottom: 40),
-               child: _buildProductListSection("Your Wishlist", appState.wishlistProducts, context),
+               child: _ProductSlider(title: "Your Wishlist", products: appState.wishlistProducts),
              ),
              
           // Fallback if both empty
           if (appState.recentlyViewed.isEmpty && appState.wishlistProducts.isEmpty)
              Padding(
                padding: const EdgeInsets.only(left: 24.0, bottom: 40),
-               child: _buildProductListSection("Recommended for You", appState.products.take(5).toList(), context),
+               child: _ProductSlider(title: "Recommended for You", products: appState.products.take(5).toList()),
              ),
              
           const SizedBox(height: 40),
@@ -120,39 +120,26 @@ class CartScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProductListSection(String title, List<Product> products, BuildContext context) {
+  Widget _buildRecentlyPurchasedSection(AppState appState) {
+    List<Product> products = [];
+    String title = 'You Might Also Like';
+
+    if (appState.orders.isNotEmpty) {
+       final purchasedIds = appState.orders.expand((o) => o.items).map((i) => i.productId).toSet();
+       final purchased = appState.products.where((p) => purchasedIds.contains(p.id)).take(10).toList();
+       if (purchased.isNotEmpty) {
+          products = purchased;
+          title = 'Recently Purchased';
+       }
+    }
+    
+    if (products.isEmpty) {
+      products = appState.products.where((p) => p.isTrending).take(10).toList();
+    }
+    
     if (products.isEmpty) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-         Padding(
-           padding: const EdgeInsets.only(bottom: 16),
-           child: Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, fontSize: 20)),
-         ),
-         SizedBox(
-           height: 280,
-           child: ListView.separated(
-             scrollDirection: Axis.horizontal,
-             itemCount: products.length,
-             separatorBuilder: (ctx, i) => const SizedBox(width: 16),
-             itemBuilder: (ctx, index) {
-               return SizedBox(
-                 width: 180,
-                 child: ProductCard(
-                   product: products[index],
-                   showBadges: true,
-                   onTap: () {
-                      Navigator.of(context).push(
-                         MaterialPageRoute(builder: (context) => ProductDetailScreen(productId: products[index].id))
-                      );
-                   },
-                 ),
-               );
-             },
-           ),
-         ),
-      ],
-    );
+
+    return _ProductSlider(title: title, products: products);
   }
 
   Widget _buildDesktopLayout(BuildContext context, AppState appState) {
@@ -216,7 +203,7 @@ class CartScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 60),
-            _RecentlyPurchasedSection(appState: appState),
+            _buildRecentlyPurchasedSection(appState),
             ],
           ),
           ),
@@ -264,7 +251,7 @@ class CartScreen extends StatelessWidget {
                  const SizedBox(height: 24),
                  _buildProtectionBadge(context),
                  const SizedBox(height: 48),
-                 _RecentlyPurchasedSection(appState: appState),
+                 _buildRecentlyPurchasedSection(appState),
                  const SizedBox(height: 80),
               ],
             ),
@@ -613,15 +600,17 @@ class _QtyBtn extends StatelessWidget {
   }
 }
 
-class _RecentlyPurchasedSection extends StatefulWidget {
-  final AppState appState;
-  const _RecentlyPurchasedSection({required this.appState});
+class _ProductSlider extends StatefulWidget {
+  final String title;
+  final List<Product> products;
+
+  const _ProductSlider({required this.title, required this.products});
 
   @override
-  State<_RecentlyPurchasedSection> createState() => _RecentlyPurchasedSectionState();
+  State<_ProductSlider> createState() => _ProductSliderState();
 }
 
-class _RecentlyPurchasedSectionState extends State<_RecentlyPurchasedSection> {
+class _ProductSliderState extends State<_ProductSlider> {
   final ScrollController _scrollController = ScrollController();
   bool _canScrollLeft = false;
   bool _canScrollRight = true;
@@ -643,7 +632,7 @@ class _RecentlyPurchasedSectionState extends State<_RecentlyPurchasedSection> {
     if (!_scrollController.hasClients) return;
     final maxScroll = _scrollController.position.maxScrollExtent;
     final currentScroll = _scrollController.offset;
-    // Tolerance of 1.0
+    // Tolerance of 1.0 (pixels)
     bool canLeft = currentScroll > 1.0;
     bool canRight = currentScroll < maxScroll - 1.0;
     
@@ -655,23 +644,9 @@ class _RecentlyPurchasedSectionState extends State<_RecentlyPurchasedSection> {
     }
   }
 
-  List<Product> _getProducts() {
-    if (widget.appState.orders.isNotEmpty) {
-       final purchasedIds = widget.appState.orders.expand((o) => o.items).map((i) => i.productId).toSet();
-       final purchased = widget.appState.products.where((p) => purchasedIds.contains(p.id)).take(10).toList();
-       if (purchased.isNotEmpty) return purchased;
-    }
-    return widget.appState.products.where((p) => p.isTrending).take(10).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final products = _getProducts();
-    if (products.isEmpty) return const SizedBox.shrink();
-
-    final title = widget.appState.orders.isNotEmpty && products.any((p) => widget.appState.orders.expand((o)=>o.items).any((i)=>i.productId==p.id)) 
-      ? 'Recently Purchased' 
-      : 'You Might Also Like';
+    if (widget.products.isEmpty) return const SizedBox.shrink();
 
     // Responsive Logic
     final screenWidth = MediaQuery.of(context).size.width;
@@ -698,7 +673,7 @@ class _RecentlyPurchasedSectionState extends State<_RecentlyPurchasedSection> {
            child: Row(
              mainAxisAlignment: MainAxisAlignment.spaceBetween,
              children: [
-               Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 20, fontWeight: FontWeight.bold)),
+               Text(widget.title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 20, fontWeight: FontWeight.bold)),
                Row(
                  children: [
                    IconButton(
@@ -733,17 +708,17 @@ class _RecentlyPurchasedSectionState extends State<_RecentlyPurchasedSection> {
            child: ListView.separated(
              controller: _scrollController,
              scrollDirection: Axis.horizontal,
-             itemCount: products.length,
+             itemCount: widget.products.length,
              separatorBuilder: (ctx, i) => const SizedBox(width: 16),
              itemBuilder: (ctx, index) {
                return SizedBox(
                  width: cardWidth,
                  child: ProductCard(
-                   product: products[index],
+                   product: widget.products[index],
                    showBadges: true,
                    onTap: () {
                       Navigator.of(context).push(
-                         MaterialPageRoute(builder: (context) => ProductDetailScreen(productId: products[index].id))
+                         MaterialPageRoute(builder: (context) => ProductDetailScreen(productId: widget.products[index].id))
                       );
                    },
                  ),

@@ -674,7 +674,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     
     final statuses = ['Placed', 'Ready to Dispatch', 'In Transit', 'Completed'];
     int currentStep = 0;
-    if (statuses.contains(order.status)) {
+    
+    // If Return or Refunded, assume forward journey is complete
+    if (order.status.contains('Return') || order.status == 'Refunded') {
+      currentStep = statuses.length - 1; 
+    } else if (statuses.contains(order.status)) {
       currentStep = statuses.indexOf(order.status);
     } else if (order.status == 'Processing') {
       currentStep = 1;

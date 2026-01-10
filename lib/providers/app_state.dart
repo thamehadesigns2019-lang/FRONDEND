@@ -23,6 +23,9 @@ class AppState with ChangeNotifier {
   double _baseShippingCost = 0.0;
   double _freeShippingThreshold = 1000000.0;
 
+  bool _enviaEnabled = true;
+  bool _codEnabled = true;
+
   AppState({required ApiService apiService}) : _apiService = apiService {
     _notificationManager = NotificationManager(_apiService);
     _initializeLocalization();
@@ -42,6 +45,8 @@ class AppState with ChangeNotifier {
         _percentageIncrease = (data['percentage_increase'] ?? 0.0).toDouble();
         _baseShippingCost = (data['base_shipping_cost'] ?? 0.0).toDouble();
         _freeShippingThreshold = (data['free_shipping_threshold'] ?? 1000000.0).toDouble();
+        _enviaEnabled = data['envia_enabled'] ?? true;
+        _codEnabled = data['cod_enabled'] ?? true;
         
         // Auto-update preferred currency based on detection
         if (data['currency'] != null) {
@@ -87,23 +92,35 @@ class AppState with ChangeNotifier {
   }
 
   /// Calculates display price based on current localization settings.
-  /// Standard Formula: BasePrice (INR) * ExRate * (1 + Markup/100)
+  /// Formula: (BasePrice (INR) * ExRate) + Markup
+  /// Or: (BasePrice * ExRate) * (1 + Markup/100) -- This is typically how markup works (on the converted cost or base cost)
+  /// User said: "20 percent of 10 ruppee is 2 rus, that means the price of our item in us should be the live conversion of 120rs"
+  /// So: (BasePrice + (BasePrice * Markup%)) * ExchangeRate
   double getPrice(double basePrice) {
     if (_exchangeRate == 1.0 && _percentageIncrease == 0.0) return basePrice;
     
-    double converted = basePrice * _exchangeRate;
-    double markedUp = converted + (converted * (_percentageIncrease / 100));
-    return double.parse(markedUp.toStringAsFixed(2));
+    // 1. Apply Markup in Base Currency (INR)
+    double markedUpBase = basePrice + (basePrice * (_percentageIncrease / 100));
+    
+    // 2. Convert to Target Currency
+    double finalPrice = markedUpBase * _exchangeRate;
+    
+    return double.parse(finalPrice.toStringAsFixed(2));
   }
 
   /// Calculates shipping cost based on subtotal.
   double getShippingCost(double subtotal) {
     if (subtotal >= _freeShippingThreshold) return 0.0;
-    return _baseShippingCost;
+    // Base shipping cost is already expected to be converted or handled by caller? 
+    // Backend localization sends `base_shipping_cost`. Is it INR or Local? 
+    // Usually admin sets it in INR. So we should convert it too.
+    return getPrice(_baseShippingCost);
   }
 
   double get baseShippingCost => _baseShippingCost;
   double get freeShippingThreshold => _freeShippingThreshold;
+  bool get enviaEnabled => _enviaEnabled;
+  bool get codEnabled => _codEnabled;
 
   Future<bool> checkLoginStatus() async {
     _isAuthenticated = await _apiService.isAuthenticated();
@@ -370,20 +387,33 @@ class AppState with ChangeNotifier {
   Map<String, dynamic> _ordersPagination = {};
   Map<String, dynamic> get ordersPagination => _ordersPagination;
 
+  bool _isFetchingOrders = false;
+
   Future<void> fetchOrders({int page = 1, int limit = 20, int? month, int? year}) async {
     if (!_isAuthenticated) {
       print('Cannot fetch orders: User not authenticated');
       return;
     }
+    if (_isFetchingOrders) return; // Prevent concurrent fetches
+
+    _isFetchingOrders = true;
+    // notifyListeners(); // distinct loading state if needed, but we don't want to flash UI
+
     try {
-      print('Fetching orders...');
+      print('Fetching orders (Page $page)...');
       // Load local orders first for immediate display (only on first page)
-      if (page == 1) {
+      if (page == 1 && _orders.isEmpty) {
          await _loadLocalOrders();
          if (_orders.isNotEmpty) notifyListeners();
       }
 
       final result = await _apiService.fetchOrders(page: page, limit: limit, month: month, year: year);
+      
+      // If we are on page 1, replace orders. If > 1, maybe append? 
+      // Current implementation seems to replace _orders (which means pagination is singular page view)
+      // or if UI handles appending. The UI uses GridView with appState.orders.
+      // And Pagination controls switch pages. So replacement is correct.
+      
       _orders = result['orders'];
       _ordersPagination = result['pagination'];
       
@@ -399,8 +429,10 @@ class AppState with ChangeNotifier {
       if (_orders.isEmpty && page == 1) {
          await _loadLocalOrders();
       }
+    } finally {
+      _isFetchingOrders = false;
+      notifyListeners();
     }
-    notifyListeners();
   }
 
   Future<void> fetchUserSettings() async {

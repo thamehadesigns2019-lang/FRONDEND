@@ -71,7 +71,7 @@ class Order {
     }
 
     return Order(
-      id: int.tryParse(json['id'].toString()) ?? 0,
+      id: (json['id'] as num?)?.toInt() ?? 0,
       items: orderItems,
       totalPrice: (json['total_price'] as num?)?.toDouble() ?? 0.0,
       createdAt: parsedDate,

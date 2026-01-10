@@ -84,6 +84,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkAddressScroll());
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final appState = Provider.of<AppState>(context);
+    // If COD is disabled but selected, force Prepaid.
+    // Also if we haven't selected anything yet, default to Prepaid if COD disabled.
+    if (!appState.codEnabled && _paymentMethod == 'COD') {
+      _paymentMethod = 'Prepaid';
+    }
+  }
+
   void _checkAddressScroll() {
     if (!_addressScrollController.hasClients) return;
     final maxScroll = _addressScrollController.position.maxScrollExtent;
@@ -259,7 +270,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Future<void> _calculateShipping() async {
-     if (_selectedCountry.isEmpty || _stateController.text.isEmpty || _pincodeController.text.isEmpty) return;
+     // Relaxed Validation:
+     // If we have Country, we should try to fetch rate (Backend handles specific requirements).
+     // Previously we required state/pincode, which blocked International Self-Ship calc.
+     if (_selectedCountry.isEmpty) return;
      
      setState(() {
        _isDetectingLocation = true; 
@@ -277,6 +291,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         // 1. Get Static Rule from AppState (Market Specific)
         final staticShippingLocal = appState.getShippingCost(cartTotal);
         
+        // Check if Envia is Enabled in System Settings - DEPRECATED CLIENT CHECK
+        // We now always call the API because the backend handles the switch between Envia and Manual rates.
+        // This ensures complex rules like State-wise shipping are respected.
+
+
         // 2. Fetch Dynamic Rates from Envia
         final addressData = {
            'country': _selectedCountry,
@@ -713,17 +732,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                if (_countryController.text.isNotEmpty)
                                  IconButton(
                                    icon: const Icon(Icons.close, color: Colors.grey, size: 18),
-                                   onPressed: () {
-                                     _countryController.clear();
-                                      setState(() {
-                                        _selectedCountry = '';
-                                        _states = []; _cities = [];
-                                        _selectedStateCode = ''; _selectedCityCode = '';
-                                        _selectedStateName = ''; _selectedCityName = '';
-                                      });
-                                      print("DEBUG: Country cleared. States/Cities reset.");
-                                     _calculateShipping();
-                                   },
+                                    onPressed: () {
+                                      _countryController.clear();
+                                      _stateController.clear();
+                                      _cityController.clear();
+                                       setState(() {
+                                         _selectedCountry = '';
+                                         _states = []; _cities = [];
+                                         _selectedStateCode = ''; _selectedCityCode = '';
+                                         _selectedStateName = ''; _selectedCityName = '';
+                                       });
+                                       print("DEBUG: Country cleared. States/Cities reset.");
+                                      _calculateShipping();
+                                    },
                                  ),
                                if (_selectedCountry.isNotEmpty)
                                  const Padding(
@@ -773,15 +794,24 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                            }
                            
                            if (match.isNotEmpty) {
-                              if (_selectedCountry != match['code']) {
-                                  setState(() {
-                                     _selectedCountry = match['code'];
-                                     _states = []; _cities = []; // Clear old matches
-                                     _selectedStateCode = ''; _selectedCityCode = '';
-                                     _selectedStateName = ''; _selectedCityName = '';
-                                  });
-                                  _fetchStates(_selectedCountry);
-                              }
+                                       final matchCode = match['code']?.toString() ?? '';
+                                       final matchName = match['name']?.toString() ?? '';
+
+                                       if (_selectedCountry != matchCode) {
+                                      _stateController.clear();
+                                      _cityController.clear();
+                                      if (mounted) {
+                                        setState(() {
+                                          _selectedCountry = matchCode;
+                                          _states = []; _cities = []; // Clear old lists
+                                          _selectedStateCode = ''; _selectedCityCode = '';
+                                          _selectedStateName = ''; _selectedCityName = '';
+                                        });
+                                      }
+                                      print("DEBUG: Auto-Matched Country: $matchName ($matchCode)");
+                                      _fetchStates(_selectedCountry);
+                                      _calculateShipping();
+                                    }
                            } else {
                                if (_selectedCountry.isNotEmpty) {
                                    setState(() => _selectedCountry = '');
@@ -964,30 +994,33 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
                   const SizedBox(height: 32),
 
-                  _buildSectionTitle("Payment Method"),
-                  _buildCardLayout([
-                    RadioListTile<String>(
-                      value: 'COD',
-                      groupValue: _paymentMethod,
-                      onChanged: (v) => setState(() => _paymentMethod = v!),
-                      title: const Text("Cash on Delivery (COD)", style: TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: const Text("Pay when you receive your order"),
-                      activeColor: AppTheme.primaryPurple,
-                      secondary: const Icon(Icons.money, color: Colors.green),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    const Divider(),
-                    RadioListTile<String>(
-                      value: 'Prepaid',
-                      groupValue: _paymentMethod,
-                      onChanged: (v) => setState(() => _paymentMethod = v!),
-                      title: const Text("Online Payment", style: TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: const Text("UPI, Cards, Netbanking (Secure)"),
-                      activeColor: AppTheme.primaryPurple,
-                      secondary: const Icon(Icons.credit_card, color: Colors.blue),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ]),
+                  if (appState.codEnabled) ...[
+                      _buildSectionTitle("Payment Method"),
+                      _buildCardLayout([
+                        RadioListTile<String>(
+                          value: 'COD',
+                          groupValue: _paymentMethod,
+                          onChanged: (v) => setState(() => _paymentMethod = v!),
+                          title: const Text("Cash on Delivery (COD)", style: TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: const Text("Pay when you receive your order"),
+                          activeColor: AppTheme.primaryPurple,
+                          secondary: const Icon(Icons.money, color: Colors.green),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        const Divider(),
+                        RadioListTile<String>(
+                          value: 'Prepaid',
+                          groupValue: _paymentMethod,
+                          onChanged: (v) => setState(() => _paymentMethod = v!),
+                          title: const Text("Online Payment", style: TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: const Text("UPI, Cards, Netbanking (Secure)"),
+                          activeColor: AppTheme.primaryPurple,
+                          secondary: const Icon(Icons.credit_card, color: Colors.blue),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ]),
+                      const SizedBox(height: 32),
+                  ],
                   
                   const SizedBox(height: 40),
                   

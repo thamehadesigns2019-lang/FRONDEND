@@ -181,118 +181,185 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // Image
-                    widget.product.image != null && widget.product.image!.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: widget.product.image!,
-                            fit: BoxFit.cover,
-                            placeholder: (c, u) => Container(color: Colors.grey[100]),
-                            errorWidget: (c, u, e) => const Icon(Icons.broken_image),
-                          )
-                        : Container(color: Colors.grey[100], child: const Icon(Icons.image)),
-                    
-                    // Gradient Overlay
-                    Positioned(
-                      bottom: 0, left: 0, right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.bottomCenter, end: Alignment.topCenter,
-                            colors: [Colors.black.withOpacity(0.8), Colors.transparent],
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final double overlayHeight = constraints.maxHeight;
+                    return Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        // Image
+                        widget.product.image != null && widget.product.image!.isNotEmpty
+                            ? CachedNetworkImage(
+                                imageUrl: widget.product.image!,
+                                fit: BoxFit.cover,
+                                placeholder: (c, u) => Container(color: Colors.grey[100]),
+                                errorWidget: (c, u, e) => const Icon(Icons.broken_image),
+                              )
+                            : Container(color: Colors.grey[100], child: const Icon(Icons.image)),
+                        
+                        // Gradient Overlay
+                        Positioned(
+                          bottom: 0, left: 0, right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.bottomCenter, end: Alignment.topCenter,
+                                colors: [Colors.black.withOpacity(0.8), Colors.transparent],
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.product.name,
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '$currency${appState.getPrice(widget.product.displayPrice).toStringAsFixed(2)} / ${widget.product.formattedUnit}',
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
+                                ),
+                                if (widget.product.reviewCount > 0)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2.0),
+                                    child: Row(
+                                      children: [
+                                         const Icon(Icons.star, color: Colors.amber, size: 10),
+                                         const SizedBox(width: 2),
+                                         Text(
+                                           "${widget.product.averageRating.toStringAsFixed(1)} (${widget.product.reviewCount})",
+                                           style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                                         )
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.product.name,
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                              maxLines: 1, overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '$currency${appState.getPrice(widget.product.displayPrice).toStringAsFixed(2)} / ${widget.product.formattedUnit}',
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
-                            ),
-                            if (widget.product.reviewCount > 0)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 2.0),
-                                child: Row(
-                                  children: [
-                                     const Icon(Icons.star, color: Colors.amber, size: 10),
-                                     const SizedBox(width: 2),
-                                     Text(
-                                       "${widget.product.averageRating.toStringAsFixed(1)} (${widget.product.reviewCount})",
-                                       style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
-                                     )
-                                  ],
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
 
-                    // Badges
-                    if (widget.showBadges)
-                    Positioned(
-                      top: 8, left: 8,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (isOutOfStock) _buildBadge('SOLD OUT', Colors.red),
-                          if (widget.product.isNewArrival == true) _buildBadge('NEW', Colors.black),
-                          if (widget.product.isTrending == true) _buildBadge('TRENDING', Colors.blueGrey),
-                        ],
-                      ),
-                    ),
+                        // Badges
+                        if (widget.showBadges)
+                        Positioned(
+                          top: 8, left: 8,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (isOutOfStock) _buildBadge('SOLD OUT', Colors.red),
+                              if (widget.product.isNewArrival == true) _buildBadge('NEW', Colors.black),
+                              if (widget.product.isTrending == true) _buildBadge('TRENDING', Colors.blueGrey),
+                            ],
+                          ),
+                        ),
 
-                    // Variant Overlay (Slides Up)
-                    AnimatedPositioned(
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeOutCubic,
-                      left: 0, right: 0,
-                      bottom: _showVariants ? 0 : -300,
-                      height: 200,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: const Border(top: BorderSide(color: Colors.black, width: 3)),
+                        // Variant Overlay (Fixed Logic)
+                        AnimatedPositioned(
+                          duration: const Duration(milliseconds: 400),
+                          curve: Curves.easeOutCubic,
+                          left: 0, 
+                          right: 0,
+                          top: _showVariants ? 0 : overlayHeight,
+                          height: overlayHeight,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).cardColor,
+                            ),
+                            child: Column(
+                              children: [
+                                 // Header
+                                 Container(
+                                   padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+                                   decoration: BoxDecoration(
+                                     color: Theme.of(context).cardColor,
+                                     border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.1))),
+                                     boxShadow: [
+                                        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5, offset: const Offset(0, 2))
+                                     ]
+                                   ),
+                                   child: Row(
+                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                     children: [
+                                       Expanded(
+                                         child: Column(
+                                           crossAxisAlignment: CrossAxisAlignment.start,
+                                           children: [
+                                             Text(
+                                               "Select ${_capitalize(currentVariantName)}", 
+                                               style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                                 fontWeight: FontWeight.bold,
+                                                 fontSize: 14
+                                               ),
+                                               maxLines: 1, overflow: TextOverflow.ellipsis,
+                                             ),
+                                           ],
+                                         ),
+                                       ),
+                                       Material(
+                                         color: Colors.transparent,
+                                         child: InkWell(
+                                           onTap: _cancelVariantSelection,
+                                           borderRadius: BorderRadius.circular(50),
+                                           child: Container(
+                                             padding: const EdgeInsets.all(6),
+                                             decoration: BoxDecoration(
+                                                color: Theme.of(context).dividerColor.withOpacity(0.1),
+                                                shape: BoxShape.circle
+                                             ),
+                                             child: const Icon(Icons.close, size: 18),
+                                           ),
+                                         ),
+                                       )
+                                     ],
+                                   ),
+                                 ),
+                                 
+                                 // Content
+                                 Expanded(
+                                   child: SingleChildScrollView(
+                                     physics: const BouncingScrollPhysics(),
+                                     padding: const EdgeInsets.all(16),
+                                     child: Center(
+                                       child: Wrap(
+                                         spacing: 8, runSpacing: 8,
+                                         alignment: WrapAlignment.center,
+                                         children: currentOptions.map((opt) {
+                                           return Material(
+                                             color: Colors.transparent,
+                                             child: InkWell(
+                                               onTap: () => _selectOption(currentVariantName, opt),
+                                               borderRadius: BorderRadius.circular(10),
+                                               child: AnimatedContainer(
+                                                 duration: const Duration(milliseconds: 200),
+                                                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                                 decoration: BoxDecoration(
+                                                   color: Theme.of(context).canvasColor,
+                                                   borderRadius: BorderRadius.circular(10),
+                                                   border: Border.all(color: Theme.of(context).primaryColor.withOpacity(0.2), width: 1),
+                                                   boxShadow: [
+                                                      BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))
+                                                   ]
+                                                 ),
+                                                 child: Text(
+                                                   opt.toString(),
+                                                   style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                                 ),
+                                               ),
+                                             ),
+                                           );
+                                         }).toList(),
+                                       ),
+                                     ),
+                                   ),
+                                 )
+                              ],
+                            ),
+                          ),
                         ),
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          children: [
-                             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                               Text("Select ${_capitalize(currentVariantName)}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                               GestureDetector(onTap: _cancelVariantSelection, child: const Icon(Icons.close, size: 18))
-                             ]),
-                             const SizedBox(height: 8),
-                             Expanded(
-                              child: SingleChildScrollView(
-                                child: Wrap(
-                                  spacing: 4, runSpacing: 4,
-                                  children: currentOptions.map((opt) {
-                                    return GestureDetector(
-                                      onTap: () => _selectOption(currentVariantName, opt),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(border: Border.all(color: Colors.black)),
-                                        child: Text(opt.toString(), style: const TextStyle(fontSize: 10)),
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              ),
-                             ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
