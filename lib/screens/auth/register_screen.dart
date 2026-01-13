@@ -378,8 +378,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             controller: _otpController,
             decoration: const InputDecoration(
               labelText: '6-Digit One Time Password',
-              letterSpacing: 2.0,
+              // letterSpacing is not a valid property of InputDecoration directly 
+              // To change letter spacing of the INPUT text, use style property of TextFormField
             ),
+            style: const TextStyle(letterSpacing: 2.0), // MOVED HERE
             keyboardType: TextInputType.number,
             maxLength: 6,
             validator: (v) => (v == null || v.length != 6) ? 'Invalid OTP' : null,
