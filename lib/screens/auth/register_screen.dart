@@ -407,72 +407,103 @@ class _RegisterScreenState extends State<RegisterScreen> {
          backgroundColor: Colors.transparent,
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-             // Progress Indicator
-             LinearProgressIndicator(
-               value: (_currentStep + 1) / 5,
-               backgroundColor: Colors.grey.shade200,
-               valueColor: const AlwaysStoppedAnimation<Color>(Colors.black),
-               minHeight: 4,
-             ),
-             
-             Expanded(
-               child: PageView(
-                 controller: _pageController,
-                 physics: const NeverScrollableScrollPhysics(), // Disable swipe
-                 children: [
-                    Padding(padding: const EdgeInsets.all(24), child: SingleChildScrollView(child: _buildStep1())),
-                    Padding(padding: const EdgeInsets.all(24), child: SingleChildScrollView(child: _buildStep2())),
-                    Padding(padding: const EdgeInsets.all(24), child: SingleChildScrollView(child: _buildStep3())),
-                    Padding(padding: const EdgeInsets.all(24), child: SingleChildScrollView(child: _buildStep4())),
-                    Padding(padding: const EdgeInsets.all(24), child: SingleChildScrollView(child: _buildStep5())),
-                 ],
-               ),
-             ),
-             
-             // Error Message Area
-             if (_errorMessage != null)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-                  child: Text(
-                    _errorMessage!, 
-                    style: const TextStyle(color: AppTheme.errorRed),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            bool isDesktop = constraints.maxWidth > 800;
 
-             // Bottom Buttons
-             Padding(
-               padding: const EdgeInsets.all(24.0),
-               child: Row(
-                 children: [
-                   if (_currentStep == 4) 
-                     Expanded(
-                       child: OutlinedButton(
-                         onPressed: _isLoading ? null : () {
-                            // Resend Logic
-                            _initiateRegistration();
-                         },
-                         child: const Text("Resend OTP"),
-                       ),
-                     ),
-                    
-                    if (_currentStep == 4)  const SizedBox(width: 16),
-
-                   Expanded(
-                     flex: 2,
-                     child: ElevatedButton(
-                       onPressed: _isLoading ? null : (_currentStep == 4 ? _completeRegistration : _nextStep),
-                       child: _isLoading 
-                         ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                         : Text(_currentStep == 4 ? "Verify & Finish" : buttonText),
-                     ),
+            Widget content = Column(
+              children: [
+                 // Progress Indicator
+                 LinearProgressIndicator(
+                   value: (_currentStep + 1) / 5,
+                   backgroundColor: Colors.grey.shade200,
+                   valueColor: const AlwaysStoppedAnimation<Color>(Colors.black),
+                   minHeight: 4,
+                 ),
+                 
+                 Expanded(
+                   child: PageView(
+                     controller: _pageController,
+                     physics: const NeverScrollableScrollPhysics(), // Disable swipe
+                     children: [
+                        Padding(padding: const EdgeInsets.all(24), child: SingleChildScrollView(child: _buildStep1())),
+                        Padding(padding: const EdgeInsets.all(24), child: SingleChildScrollView(child: _buildStep2())),
+                        Padding(padding: const EdgeInsets.all(24), child: SingleChildScrollView(child: _buildStep3())),
+                        Padding(padding: const EdgeInsets.all(24), child: SingleChildScrollView(child: _buildStep4())),
+                        Padding(padding: const EdgeInsets.all(24), child: SingleChildScrollView(child: _buildStep5())),
+                     ],
                    ),
-                 ],
-               ),
-             ),
-          ],
+                 ),
+                 
+                 // Error Message Area
+                 if (_errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                      child: Text(
+                        _errorMessage!, 
+                        style: const TextStyle(color: AppTheme.errorRed),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+
+                 // Bottom Buttons
+                 Padding(
+                   padding: const EdgeInsets.all(24.0),
+                   child: Row(
+                     children: [
+                       if (_currentStep == 4) 
+                         Expanded(
+                           child: OutlinedButton(
+                             onPressed: _isLoading ? null : () {
+                                // Resend Logic
+                                _initiateRegistration();
+                             },
+                             child: const Text("Resend OTP"),
+                           ),
+                         ),
+                        
+                        if (_currentStep == 4)  const SizedBox(width: 16),
+
+                       Expanded(
+                         flex: 2,
+                         child: ElevatedButton(
+                           onPressed: _isLoading ? null : (_currentStep == 4 ? _completeRegistration : _nextStep),
+                           child: _isLoading 
+                             ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                             : Text(_currentStep == 4 ? "Verify & Finish" : buttonText),
+                         ),
+                       ),
+                     ],
+                   ),
+                 ),
+              ],
+            );
+
+            if (isDesktop) {
+              return Center(
+                child: Container(
+                  width: 600,
+                  margin: const EdgeInsets.symmetric(vertical: 32),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 20,
+                        spreadRadius: 5,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: content,
+                ),
+              );
+            }
+
+            return content;
+          },
         ),
       ),
     );
