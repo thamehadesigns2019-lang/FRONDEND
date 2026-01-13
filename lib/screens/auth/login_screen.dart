@@ -156,14 +156,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 400),
-                child: Column(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+             bool isDesktop = constraints.maxWidth > 800;
+
+             Widget content = Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -176,22 +173,26 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       ),
                     ),
                     const SizedBox(height: 48),
-                    const Text(
-                      "WELCOME BACK",
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        letterSpacing: 2.0,
+                    Center(
+                      child: Text(
+                        "WELCOME BACK",
+                        style: TextStyle(
+                          fontSize: isDesktop ? 28 : 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                          letterSpacing: 2.0,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      _isOtpLogin ? "Sign in with OTP" : "Sign in to continue shopping",
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade600,
-                        letterSpacing: 1.0,
+                    Center(
+                      child: Text(
+                        _isOtpLogin ? "Sign in with OTP" : "Sign in to continue shopping",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                          letterSpacing: 1.0,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 48),
@@ -279,7 +280,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             TextFormField(
                               controller: _otpController,
                               keyboardType: TextInputType.number,
-                              style: const TextStyle(color: Colors.black),
+                              style: const TextStyle(color: Colors.black, letterSpacing: 2.0),
                               decoration: const InputDecoration(
                                 labelText: 'ENTER 6-DIGIT OTP',
                                 prefixIcon: Icon(Icons.lock_clock_outlined, color: Colors.black),
@@ -406,10 +407,43 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       ),
                     ),
                   ],
+                );
+            
+            if (isDesktop) {
+              return Center(
+                child: SingleChildScrollView(
+                  child: Container(
+                    width: 500,
+                    margin: const EdgeInsets.symmetric(vertical: 32),
+                    padding: const EdgeInsets.all(40),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(color: Colors.grey.shade200),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 30,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: content,
+                  ),
+                ),
+              );
+            }
+
+            // Mobile View
+            return Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: content,
                 ),
               ),
-            ),
-          ),
+            );
+          }
         ),
       ),
     );
