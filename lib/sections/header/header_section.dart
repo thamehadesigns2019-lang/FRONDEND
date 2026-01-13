@@ -48,19 +48,9 @@ class HeaderSection extends StatelessWidget {
             ],
           ),
 
-          if (isDesktopMode) ...[
-             const SizedBox(width: 48),
-             // Search Bar
-             Expanded(
-               child: Center(
-                 child: ConstrainedBox(
-                   constraints: const BoxConstraints(maxWidth: 600),
-                   child: const ProductSearchBar(),
-                 ),
-               ),
-             ),
-             const SizedBox(width: 48),
-          ],
+          // Search Bar removed from Desktop Header to prevent duplication 
+          // as per user request (similar to mobile view behavior)
+          if (isDesktopMode) const Spacer(), // Use Spacer to maintain separation if needed, or rely on spaceBetween
           
            // Right Actions
           Row(
