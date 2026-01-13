@@ -560,7 +560,7 @@ class AppState with ChangeNotifier {
         email,
         password,
         otp,
-        // fullName: fullName, // Removed as backend schema doesn't allow it
+        fullName: fullName, 
         age: age,
         gender: gender,
         countryCode: countryCode,
